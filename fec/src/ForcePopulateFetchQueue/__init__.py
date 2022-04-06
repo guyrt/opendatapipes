@@ -10,7 +10,7 @@ def main(req: func.HttpRequest, outputQueue: func.Out[func.QueueMessage]) -> fun
 
     req_body = req.get_json()
     for daily_key in req_body.get('daily'):
-        write_daily(daily_key, outputQueue, req_body.get('force', False))
+        write_daily(daily_key, outputQueue)
 
     for annual_key in req_body.get('annual_keys'):
         write_annual(annual_key, outputQueue)

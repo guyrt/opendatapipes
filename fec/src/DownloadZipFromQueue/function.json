@@ -1,0 +1,27 @@
+{
+  "scriptFile": "__init__.py",
+  "bindings": [
+    {
+      "name": "msg",
+      "type": "queueTrigger",
+      "direction": "in",
+      "queueName": "q-urlstofetch",
+      "connection": "AzureWebJobsStorage"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "outputQueue",
+      "queueName": "q-filestounzip",
+      "connection": "AzureWebJobsStorage"
+    },
+    {
+      "name": "outputblob",
+      "type": "blob",
+      "dataType": "binary",
+      "path": "rawzips/{blobpath}",
+      "connection": "FecDataStorageConnectionAppSetting",
+      "direction": "out"
+    }
+  ]
+}
