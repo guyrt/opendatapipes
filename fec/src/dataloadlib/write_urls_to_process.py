@@ -1,4 +1,3 @@
-from asyncio import DatagramProtocol
 import json
 
 daily_patterns = [
@@ -45,21 +44,25 @@ year_patterns = [
 ]
 
 
-def write_daily(datepattern : str, out_queue) -> None:
+def write_daily(datepattern : str) -> None:
     """Expect a string like yyyymmdd and produce all FEC bulk data URLs to process."""
+    messages = []
     for pattern in daily_patterns:
         message = json.dumps({
             'pattern': pattern['pattern'].format(datepattern),
             'blobpath': pattern['blobpath'].format(datepattern)
         })
-        out_queue.set(message)
+        messages.append(message)
+    return messages
 
 
-def write_annual(year_pattern: str, out_queue) -> None:
+def write_annual(year_pattern: str) -> None:
     year_pattern_short = year_pattern[2:]
+    messages = []
     for pattern in year_patterns:
         message = json.dumps({
             'pattern': pattern['pattern'].format(year_pattern, year_pattern_short),
             'blobpath': pattern['blobpath'].format(year_pattern),
         })
-        out_queue.set(message)
+        messages.append(message)
+    return messages

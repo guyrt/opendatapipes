@@ -1,11 +1,12 @@
 import datetime
 import logging
+import typing
 
 from dataloadlib.write_urls_to_process import write_daily
 
 import azure.functions as func
 
-def main(mytimer: func.TimerRequest, outputQueue: func.Out[func.QueueMessage]) -> None:
+def main(mytimer: func.TimerRequest, outputQueue: func.Out[typing.List[func.QueueMessage]]) -> None:
     """Timer request to build requests. Populates a queue with URL patterns in FEC bulk data capture to check."""
 
     #
@@ -13,8 +14,11 @@ def main(mytimer: func.TimerRequest, outputQueue: func.Out[func.QueueMessage]) -
     # Push urls to check to the queue
     #
 
-    utc_timestamp = datetime.datetime.utcnow()
+    utc_timestamp = datetime.datetime.utcnow() - datetime.timedelta(days=1)
     utc_str = utc_timestamp.strftime('%Y%m%d')
-    write_daily(utc_str, outputQueue)
+    messages = write_daily(utc_str)
 
-    logging.info(f'PopulateFetchQueue ran on {utc_str} at {utc_timestamp}')
+    outputQueue.set(tuple(messages))
+
+    logging.info(f'PopulateFetchQueue ran on {utc_str} at {utc_timestamp} with {len(messages)} messages')
+    logging.info(messages)

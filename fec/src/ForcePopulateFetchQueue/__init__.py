@@ -9,13 +9,18 @@ def main(req: func.HttpRequest, outputQueue: func.Out[func.QueueMessage]) -> fun
     logging.info('Python HTTP trigger function processed a request.')
 
     req_body = req.get_json()
-    for daily_key in req_body.get('daily'):
-        write_daily(daily_key, outputQueue)
+    messages = []
+    for daily_key in req_body.get('daily', []):
+        messages.extend(write_daily(daily_key))
 
-    for annual_key in req_body.get('annual_keys'):
-        write_annual(annual_key, outputQueue)
+    for annual_key in req_body.get('annual_keys', []):
+        messages.extend(write_annual(annual_key))
+
+    outputQueue.set(tuple(messages))
+
+    out_message = "Success on {0} messages\n\n{1}".format(len(messages), messages)
 
     return func.HttpResponse(
-            "Success",
+            out_message,
             status_code=200
     )
