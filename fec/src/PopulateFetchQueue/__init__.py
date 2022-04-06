@@ -14,7 +14,7 @@ def main(mytimer: func.TimerRequest, outputQueue: func.Out[func.QueueMessage]) -
     #
 
     utc_timestamp = datetime.datetime.utcnow()
-    utc_str = utc_timestamp.strftime('yyyyMMdd')
+    utc_str = utc_timestamp.strftime('%Y%m%d')
     write_daily(utc_str, outputQueue)
 
     logging.info(f'PopulateFetchQueue ran on {utc_str} at {utc_timestamp}')
