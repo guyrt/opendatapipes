@@ -1,13 +1,12 @@
 import logging
 import json
-import typing
 
 import azure.functions as func
 
 from dataloadlib.unzip_file import unzip_and_upload
 
 
-def main(msg: func.QueueMessage, outputQueue: func.Out[typing.List[func.QueueMessage]]) -> None:
+def main(msg: func.QueueMessage, outputQueue: func.Out[func.QueueMessage]) -> None:
     """Unzip a file and write all included files to blob storage."""
 
     queue_message = json.dumps(msg.get_body().decode('utf-8'))

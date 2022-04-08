@@ -1,12 +1,11 @@
 import datetime
 import logging
-import typing
 
 from dataloadlib.write_urls_to_process import write_daily
 
 import azure.functions as func
 
-def main(mytimer: func.TimerRequest, outputQueue: func.Out[typing.List[func.QueueMessage]]) -> None:
+def main(mytimer: func.TimerRequest, outputQueue: func.Out[func.QueueMessage]) -> None:
     """Timer request to build requests. Populates a queue with URL patterns in FEC bulk data capture to check."""
 
     #
