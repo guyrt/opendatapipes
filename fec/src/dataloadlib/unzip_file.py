@@ -15,7 +15,7 @@ def unzip_and_upload(unzip_request_source):
     bc = service_client.get_blob_client(container = 'rawzips', blob=unzip_request_source)
     unzip_request_root = unzip_request_source.split('/')[:-1]
 
-    zip_file_contents = bc.download_blob().read_all()
+    zip_file_contents = bc.download_blob().readall()
     zf = zipfile.ZipFile(BytesIO(zip_file_contents))
     created_files = []
     total_bytes = 0
@@ -27,6 +27,6 @@ def unzip_and_upload(unzip_request_source):
         contents = zf.read(local_file_name)
 
         upload_client = service_client.get_blob_client(container=upload_container, blob=local_file_name)
-        upload_client.upload(contents)
+        upload_client.upload_blob(contents)
 
     return created_files, total_bytes
