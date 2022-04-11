@@ -13,18 +13,18 @@ def unzip_and_upload(unzip_request_source):
     blob_connection_string = os.environ['FecDataStorageConnectionAppSetting']
     service_client = BlobServiceClient.from_connection_string(blob_connection_string)
     bc = service_client.get_blob_client(container = 'rawzips', blob=unzip_request_source)
-    unzip_request_root = unzip_request_source.split('/')[:-1]
+    unzip_request_root = "/".join(unzip_request_source.split('/')[:-1])
 
     zip_file_contents = bc.download_blob().readall()
     zf = zipfile.ZipFile(BytesIO(zip_file_contents))
     created_files = []
     total_bytes = 0
     for file in zf.filelist:
-        local_file_name = file.filename
+        local_file_name = f"{unzip_request_root}/{file.filename}"
         total_bytes += file.file_size
 
-        created_files.append(f"{unzip_request_root}/{local_file_name}")
-        contents = zf.read(local_file_name)
+        created_files.append(local_file_name)
+        contents = zf.read(file.filename)
 
         upload_client = service_client.get_blob_client(container=upload_container, blob=local_file_name)
         upload_client.upload_blob(contents)
