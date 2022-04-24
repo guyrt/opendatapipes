@@ -1,20 +1,18 @@
 from distutils.command.upload import upload
 from io import BytesIO
 import zipfile
-
-import os
-from azure.storage.blob import BlobServiceClient
+from .blob_helpers import get_blob_client, get_service_client
 
 upload_container = 'rawunzips'
 
 
 def unzip_and_upload(unzip_request_source):
     """Download file, unzip to memory, and upload containing files to azure blob storage."""
-    blob_connection_string = os.environ['FecDataStorageConnectionAppSetting']
-    service_client = BlobServiceClient.from_connection_string(blob_connection_string)
-    bc = service_client.get_blob_client(container = 'rawzips', blob=unzip_request_source)
+    service_client = get_service_client()
+    bc = get_blob_client(service_client, 'rawzips', unzip_request_source)
+    
     unzip_request_root = "/".join(unzip_request_source.split('/')[:-1])
-
+    
     zip_file_contents = bc.download_blob().readall()
     zf = zipfile.ZipFile(BytesIO(zip_file_contents))
     created_files = []
