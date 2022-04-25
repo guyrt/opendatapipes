@@ -7,6 +7,13 @@
       "direction": "in",
       "queueName": "q-filestodecode",
       "connection": "AzureWebJobsStorage"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "outputQueue",
+      "queueName": "q-jsonfilestomerge",
+      "connection": "AzureWebJobsStorage"
     }
   ]
 }

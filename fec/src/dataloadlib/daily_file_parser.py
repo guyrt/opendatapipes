@@ -2,7 +2,7 @@ import datetime
 from json import loads, dumps
 import tempfile
 
-from blob_helpers import get_blob_client, get_service_client
+from .blob_helpers import get_blob_client, get_service_client
 
 
 class FecFileParser(object):
@@ -28,7 +28,7 @@ class FecFileParser(object):
         """
         Process all lines of a file and list of dictionaries, one per line.
         """
-        first_line = filehandle.readline().decode('utf-8')
+        first_line = filehandle.readline().decode('latin-1')
         first_line = first_line.replace('"', '').strip().split(chr(28))
         if first_line[0] != "HDR":
             raise Exception("Failed to parse: HDR expected on first line")
@@ -38,7 +38,7 @@ class FecFileParser(object):
         in_comment = False
 
         for line in filehandle:
-            line = line.decode('utf-8').strip()
+            line = line.decode('latin-1').strip()
             line = line.replace('"', '')
 
             if not line:
@@ -70,7 +70,7 @@ class FecFileParser(object):
 
 def build_parser():
     utc_timestamp = str(datetime.datetime.utcnow())
-    definitions = loads(open("./rawparserdata.json", "r").read())
+    definitions = loads(open("./dataloadlib/rawparserdata.json", "r").read())
     return FecFileParser(definitions, utc_timestamp)
 
 
@@ -98,7 +98,8 @@ class DailyFileWriter(object):
                 simple_linetype = line['clean_linetype']
 
             tmp_file = self.get_tmpfile(simple_linetype)
-            tmp_file.writelines([dumps(line).encode()])
+            txt_line = f"{dumps(line)}\n".encode()
+            tmp_file.writelines([txt_line])
         
         # upload
         for line_type, fp in self.output_file_types.items():
