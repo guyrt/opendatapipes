@@ -2,7 +2,7 @@ import datetime
 from json import loads, dumps
 import tempfile
 
-from dataloadlib.blob_helpers import get_blob_client, get_service_client
+from blob_helpers import get_blob_client, get_service_client
 
 
 class FecFileParser(object):
@@ -11,10 +11,8 @@ class FecFileParser(object):
     """
 
     def __init__(self, definitions, upload_date):
-        self.feclookup = loads(definitions.read())
-        definitions.seek(0)
+        self.feclookup = definitions
         self.upload_date = upload_date
-        self.organization_information = dict()
 
     def getschema(self, version, linetype):
         versioned_formdata = self.feclookup['v' + version]
@@ -30,7 +28,8 @@ class FecFileParser(object):
         """
         Process all lines of a file and list of dictionaries, one per line.
         """
-        first_line = filehandle.readline().replace('"', '').strip().split(chr(28))
+        first_line = filehandle.readline().decode('utf-8')
+        first_line = first_line.replace('"', '').strip().split(chr(28))
         if first_line[0] != "HDR":
             raise Exception("Failed to parse: HDR expected on first line")
 
@@ -39,7 +38,7 @@ class FecFileParser(object):
         in_comment = False
 
         for line in filehandle:
-            line = line.strip()
+            line = line.decode('utf-8').strip()
             line = line.replace('"', '')
 
             if not line:
@@ -66,15 +65,12 @@ class FecFileParser(object):
             line_dict["clean_linetype"] = clean_linetype
             line_dict['upload_date'] = self.upload_date
 
-            if clean_linetype[0] == "F" and schema:
-                self.organization_information = line_dict
-            else:
-                yield line_dict
+            yield line_dict
 
 
 def build_parser():
-    utc_timestamp = datetime.datetime.utcnow()
-    definitions = loads(open("./rawparseddata.json", "r").read())
+    utc_timestamp = str(datetime.datetime.utcnow())
+    definitions = loads(open("./rawparserdata.json", "r").read())
     return FecFileParser(definitions, utc_timestamp)
 
 
@@ -102,7 +98,7 @@ class DailyFileWriter(object):
                 simple_linetype = line['clean_linetype']
 
             tmp_file = self.get_tmpfile(simple_linetype)
-            tmp_file.writelines([dumps(tmp_file)])
+            tmp_file.writelines([dumps(line).encode()])
         
         # upload
         for line_type, fp in self.output_file_types.items():
@@ -110,16 +106,13 @@ class DailyFileWriter(object):
             fp.seek(0)
             out_blob_name = self._get_output_blob_name(input_blob_file_path, line_type)
             out_blob = get_blob_client(service_client, "rawparsed", out_blob_name)
-            out_blob.upload_blob(fp)
+            out_blob.upload_blob(fp, overwrite=True)
 
             q_msgs.append(dumps({
                 'input_filename': input_blob_file_path,
                 'output_filename': out_blob_name,
                 'container': 'rawparsed'
             }))
-
-        # add org information to a rolling list (try appending?)
-        organizations = self.fec_file_parser.organization_information
 
         return q_msgs
 
@@ -137,3 +130,10 @@ class DailyFileWriter(object):
         fp = tempfile.TemporaryFile()
         self.output_file_types[line_type] = fp
         return fp
+
+
+if __name__ == "__main__":
+    file_parser = build_parser()
+    uploader = DailyFileWriter(file_parser)
+    ret = uploader.parse("electronic/1577433.fec")
+    print(ret)
