@@ -80,9 +80,12 @@ class DailyFileWriter(object):
         self.fec_file_parser = fec_file_parser
         self.output_file_types = {}  # simplified line => tmp file handle
 
-    def parse(self, input_blob_file_path : str):
+    def parse(self, parse_msg : dict):
         
         q_msgs = []
+
+        input_blob_file_path = parse_msg['blobpath']
+        datepattern = parse_msg['datepattern']
 
         service_client = get_service_client()
         blob = get_blob_client(service_client, "rawunzips", input_blob_file_path)
@@ -105,7 +108,7 @@ class DailyFileWriter(object):
         for line_type, fp in self.output_file_types.items():
             fp.flush()
             fp.seek(0)
-            out_blob_name = self._get_output_blob_name(input_blob_file_path, line_type)
+            out_blob_name = self._get_output_blob_name(input_blob_file_path, line_type, datepattern)
             out_blob = get_blob_client(service_client, "rawparsed", out_blob_name)
             out_blob.upload_blob(fp, overwrite=True)
 
@@ -117,12 +120,12 @@ class DailyFileWriter(object):
 
         return q_msgs
 
-    def _get_output_blob_name(self, input_blob_file_path : str, line_type : str):
+    def _get_output_blob_name(self, input_blob_file_path : str, line_type : str, datepattern : str):
         split_path = input_blob_file_path.split("/")
         t = "/".join(split_path[:-1])
         orig_file = split_path[-1]
         orig_file = orig_file.replace(".fec", ".json")
-        return "/".join([t, line_type, orig_file])
+        return "/".join([t, line_type, datepattern, orig_file])
     
     def get_tmpfile(self, line_type : str):
         if line_type in self.output_file_types:
@@ -136,5 +139,5 @@ class DailyFileWriter(object):
 if __name__ == "__main__":
     file_parser = build_parser()
     uploader = DailyFileWriter(file_parser)
-    ret = uploader.parse("electronic/1577433.fec")
+    ret = uploader.parse({'datepattern': "20220301", "blobpath": "electronic/1577433.fec"})
     print(ret)

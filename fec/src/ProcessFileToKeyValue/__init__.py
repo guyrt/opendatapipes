@@ -1,4 +1,5 @@
 import logging
+import json
 
 import azure.functions as func
 
@@ -9,7 +10,7 @@ def main(msg: func.QueueMessage, outputQueue: func.Out[func.QueueMessage]) -> No
     file_parser = build_parser()
     uploader = DailyFileWriter(file_parser)
 
-    msg_body = msg.get_body().decode('utf-8')
+    msg_body = json.loads(msg.get_body().decode('utf-8'))
     logging.info('Processing ProcessFileToKeyValue queue item: %s', msg_body)
 
     output_messages = uploader.parse(msg_body)

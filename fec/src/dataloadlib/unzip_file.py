@@ -8,8 +8,9 @@ from .blob_helpers import get_blob_client, get_service_client
 upload_container = 'rawunzips'
 
 
-def unzip_and_upload(unzip_request_source):
+def unzip_and_upload(unzip_request):
     """Download file, unzip to memory, and upload containing files to azure blob storage."""
+    unzip_request_source = unzip_request['blobpath']
     service_client = get_service_client()
     bc = get_blob_client(service_client, 'rawzips', unzip_request_source)
     
@@ -49,7 +50,11 @@ def unzip_and_upload(unzip_request_source):
 
         fh.close()
 
-    return created_files, total_bytes
+    queue_messages = [
+        {'datepattern': unzip_request['datepattern'], 'blobpath': c} for c in created_files
+    ]
+
+    return queue_messages, total_bytes
 
 
 def split_and_upload(fh, service_client, original_remote_filename):
