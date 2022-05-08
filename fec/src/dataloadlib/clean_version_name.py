@@ -27,16 +27,14 @@ def proc_row(row):
                 _, name = row_element.split('-', 1)
             else:
                 name = row_element
-            name = name.replace(".", "")
-            name = name.replace("/", "")
-            name = name.replace("(", "")
-            name = name.replace(")", "")
+
+            for c in "./(){}?":
+                name = name.replace(c, "")
             if '\n' in name:
                 name = name.split('\n')[0]
             name = name.replace("\u2026", "")
 
             name = name.replace(" ", "_")
-            name = name.replace("?", "")
             name = name.replace("-", "_")
             fec_map[version][form].append(name)
 

@@ -1,13 +1,20 @@
 import json
-import requests
-import logging
+import tempfile
+import urllib.request
 
-def download_zip(download_request, outputQueue, outputBlob):
-    response = requests.get(download_request['pattern'])
-    if response.status_code != 200:
-        logging.error("Error code {0} on request {1}".format(response.status_code, download_request['pattern']))
-        return
-    zipfile = response.content
-    outputBlob.set(zipfile)
+from .blob_helpers import get_blob_client, get_service_client
+
+
+def download_zip(download_request):
+    request_url = download_request['pattern']
+    tmpfile_name = tempfile.NamedTemporaryFile()
+    urllib.request.urlretrieve(request_url, tmpfile_name.name)
+    tmpfile_name.seek(0)
+
+    # upload blob
+    service_client = get_service_client()
+    out_blob = get_blob_client(service_client, "rawzips", download_request['blobpath'])
+    out_blob.upload_blob(tmpfile_name, overwrite=True)
+
     queue_msg = json.dumps(download_request)
-    outputQueue.set(queue_msg)
+    return queue_msg

@@ -14,14 +14,6 @@
       "name": "outputQueue",
       "queueName": "q-filestounzip",
       "connection": "AzureWebJobsStorage"
-    },
-    {
-      "name": "outputblob",
-      "type": "blob",
-      "dataType": "binary",
-      "path": "rawzips/{blobpath}",
-      "connection": "FecDataStorageConnectionAppSetting",
-      "direction": "out"
     }
   ]
 }

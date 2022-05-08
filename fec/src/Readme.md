@@ -23,3 +23,6 @@ what do you want to do with this data?
 5) pull together zip stats from census. try to predict level of and direction of donation. find outliers and predictors. 
     very likely outliers high will have more govt contracts nearby...
     can you get all federal contracts??
+
+
+Need to remember I linked the data account in synapse and then selected "get one file" and now i have all of them.

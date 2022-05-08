@@ -50,7 +50,8 @@ def write_daily(datepattern : str) -> None:
     for pattern in daily_patterns:
         message = json.dumps({
             'pattern': pattern['pattern'].format(datepattern),
-            'blobpath': pattern['blobpath'].format(datepattern)
+            'blobpath': pattern['blobpath'].format(datepattern),
+            'datepattern': datepattern
         })
         messages.append(message)
     return messages
@@ -63,6 +64,7 @@ def write_annual(year_pattern: str) -> None:
         message = json.dumps({
             'pattern': pattern['pattern'].format(year_pattern, year_pattern_short),
             'blobpath': pattern['blobpath'].format(year_pattern),
+            'yearpattern': year_pattern
         })
         messages.append(message)
     return messages
