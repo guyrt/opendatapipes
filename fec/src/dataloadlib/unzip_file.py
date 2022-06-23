@@ -5,6 +5,7 @@ import tempfile
 import zipfile
 import queue
 from threading import Thread
+import time
 
 try:
     from .blob_helpers import get_blob_client, get_service_client
@@ -21,6 +22,8 @@ total_queue_bytes = []
 
 def unzip_and_upload(unzip_request):
     """Download file, unzip to memory, and upload containing files to azure blob storage."""
+    start = time.time()
+
     logging.info("starting unzip")
     unzip_request_source = unzip_request['blobpath']
     datepattern = unzip_request['datepattern']
@@ -56,14 +59,13 @@ def unzip_and_upload(unzip_request):
 
     upload_queue.join()
 
-    created_files = []
-    for l in queue_outputs:
-        created_files.extend(l)
-
     queue_messages = [
-        {'datepattern': datepattern, 'blobpath': c} for c in created_files
+        {'datepattern': datepattern, 'blobpath': c} for c in queue_outputs
     ]
 
+    end = time.time()
+    logging.info(f'Took {end - start} time to run.')
+    print(f'Took {end - start} time to run.')
     return queue_messages, sum(total_queue_bytes)
 
 
@@ -73,11 +75,10 @@ def upload_worker(thread_num):
         print(f"Thread {thread_num} started task.")
         try:
             created_files, total_bytes = upload_file_pool(*item)
-            assert created_files is list
             queue_outputs.extend(created_files)
             total_queue_bytes.append(total_bytes)
-        except:
-            logging.error(f"Upload failed on {item}")
+        except Exception as e:
+            logging.error(f"Upload failed on {item} because {e}")
 
         upload_queue.task_done()
 
