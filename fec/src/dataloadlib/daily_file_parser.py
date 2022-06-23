@@ -1,6 +1,7 @@
 import datetime
 from json import loads, dumps
 import tempfile
+import logging
 
 from .blob_helpers import get_blob_client, get_service_client
 
@@ -15,6 +16,7 @@ class FecFileParser(object):
         self.upload_date = upload_date
 
     def getschema(self, version, linetype):
+        logging.info(f'Operating on version {version}')
         versioned_formdata = self.feclookup['v' + version]
         i = len(linetype)
         while i >= 0 and linetype[:i] not in versioned_formdata:
