@@ -3,14 +3,27 @@ from os.path import isfile, join, getsize
 import logging
 import tempfile
 import zipfile
-from .blob_helpers import get_blob_client, get_service_client
+import queue
+from threading import Thread
+
+try:
+    from .blob_helpers import get_blob_client, get_service_client
+except ImportError:
+    from blob_helpers import get_blob_client, get_service_client
 
 upload_container = 'rawunzips'
+
+num_parallel_uploads = 10
+upload_queue = queue.Queue(maxsize=num_parallel_uploads)
+queue_outputs = []
+total_queue_bytes = []
 
 
 def unzip_and_upload(unzip_request):
     """Download file, unzip to memory, and upload containing files to azure blob storage."""
+    logging.info("starting unzip")
     unzip_request_source = unzip_request['blobpath']
+    datepattern = unzip_request['datepattern']
     service_client = get_service_client()
     bc = get_blob_client(service_client, 'rawzips', unzip_request_source)
     
@@ -33,28 +46,60 @@ def unzip_and_upload(unzip_request):
     if non_files:
         raise Exception(f"Found directories which is not supported: {', '.join(non_files)}")
 
-    created_files = []
-    total_bytes = 0
+    # in parallel upload
+
+    for i in range(num_parallel_uploads):
+        Thread(target = upload_worker, args=(i, ), daemon=True).start()
+
     for rawfilename in all_files:
-        filename = join(unzip_tempdir.name, rawfilename)
-        fh = open(filename, 'rb')
-        remote_file_name = f"{unzip_request_root}/{rawfilename}"
-        file_size = getsize(filename)
-        total_bytes += file_size
+        upload_queue.put((rawfilename, unzip_tempdir, unzip_request_root, service_client))
 
-        if file_size < 500 * 1000 * 1000: # 500 mb
-            created_files.append(remote_file_name)
-            upload(service_client, remote_file_name, fh)
-        else:
-            created_files.extend(split_and_upload(fh, service_client, remote_file_name))
+    upload_queue.join()
 
-        fh.close()
+    created_files = []
+    for l in queue_outputs:
+        created_files.extend(l)
 
     queue_messages = [
-        {'datepattern': unzip_request['datepattern'], 'blobpath': c} for c in created_files
+        {'datepattern': datepattern, 'blobpath': c} for c in created_files
     ]
 
-    return queue_messages, total_bytes
+    return queue_messages, sum(total_queue_bytes)
+
+
+def upload_worker(thread_num):
+    while True:
+        item = upload_queue.get()
+        print(f"Thread {thread_num} started task.")
+        try:
+            created_files, total_bytes = upload_file_pool(*item)
+            queue_outputs.extend(created_files)
+            total_queue_bytes.append(total_bytes)
+        except:
+            logging.error(f"Upload failed on {item}")
+
+        upload_queue.task_done()
+
+
+def upload_file_pool(rawfilename, unzip_tempdir, unzip_request_root, service_client):
+    logging.info(f"Uploading {rawfilename}")
+    print(f'Uploading {rawfilename}')
+    created_files = []
+    total_bytes = 0
+    filename = join(unzip_tempdir.name, rawfilename)
+    fh = open(filename, 'rb')
+    remote_file_name = f"{unzip_request_root}/{rawfilename}"
+    file_size = getsize(filename)
+    total_bytes += file_size
+
+    if file_size < 500 * 1000 * 1000: # 500 mb
+        created_files.append(remote_file_name)
+        upload(service_client, remote_file_name, fh)
+    else:
+        created_files.extend(split_and_upload(fh, service_client, remote_file_name))
+
+    fh.close()
+    return created_files, total_bytes
 
 
 def split_and_upload(fh, service_client, original_remote_filename):
@@ -110,4 +155,6 @@ def upload(service_client, remote_filename, fh):
 
 
 if __name__ == "__main__":
-    print(unzip_and_upload("electronic/20220221.zip"))
+    import sys
+    logging.basicConfig(stream=sys.stdout)
+    print(unzip_and_upload({'blobpath': "electronic/20220221.zip", 'datepattern': '20220221'}))

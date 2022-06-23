@@ -11,4 +11,5 @@ def main(msg: func.QueueMessage, outputQueue: func.Out[func.QueueMessage]) -> No
 
     msg_json = json.loads(msg_body)
     queue_msg = download_zip(msg_json)
-    outputQueue.set(queue_msg)
+    if queue_msg:
+        outputQueue.set(queue_msg)
