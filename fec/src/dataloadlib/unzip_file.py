@@ -73,6 +73,7 @@ def upload_worker(thread_num):
         print(f"Thread {thread_num} started task.")
         try:
             created_files, total_bytes = upload_file_pool(*item)
+            assert created_files is list
             queue_outputs.extend(created_files)
             total_queue_bytes.append(total_bytes)
         except:
