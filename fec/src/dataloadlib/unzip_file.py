@@ -6,6 +6,7 @@ import zipfile
 import queue
 from threading import Thread
 import time
+from json import dumps
 
 try:
     from .blob_helpers import get_blob_client, get_service_client
@@ -62,6 +63,7 @@ def unzip_and_upload(unzip_request):
     queue_messages = [
         {'datepattern': datepattern, 'blobpath': c} for c in queue_outputs
     ]
+    queue_messages = [dumps(m) for m in queue_messages]
 
     end = time.time()
     logging.info(f'Took {end - start} time to run.')
