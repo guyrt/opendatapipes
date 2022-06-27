@@ -4,6 +4,8 @@ from azure.storage.blob import BlobServiceClient, BlobClient
 
 def get_blob_client(service_client : BlobServiceClient, container : str, blob : str) -> BlobClient:
     bc = service_client.get_blob_client(container = container, blob=blob)
+    if bc.exists():
+        print(f"Blob client for {blob} sized {bc.get_blob_properties()['size'] / 1024 / 1024} mb.")
     return bc
 
 

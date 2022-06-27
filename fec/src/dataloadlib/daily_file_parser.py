@@ -2,8 +2,13 @@ import datetime
 from json import loads, dumps
 import tempfile
 import logging
+import time
+from pyarrow import json as arrowjson, parquet
 
-from .blob_helpers import get_blob_client, get_service_client
+try:
+    from .blob_helpers import get_blob_client, get_service_client
+except ImportError:
+    from blob_helpers import get_blob_client, get_service_client
 
 
 class FecFileParser(object):
@@ -16,7 +21,6 @@ class FecFileParser(object):
         self.upload_date = upload_date
 
     def getschema(self, version, linetype):
-        logging.info(f'Operating on version {version}')
         versioned_formdata = self.feclookup['v' + version]
         i = len(linetype)
         while i >= 0 and linetype[:i] not in versioned_formdata:
@@ -83,19 +87,21 @@ class DailyFileWriter(object):
         self.output_file_types = {}  # simplified line => tmp file handle
 
     def parse(self, parse_msg : dict):
-        
+        start = time.time()
         q_msgs = []
 
         input_blob_file_path = parse_msg['blobpath']
         datepattern = parse_msg['datepattern']
 
         service_client = get_service_client()
+        print(f"Downloading blob {input_blob_file_path} to temp storage.")
         blob = get_blob_client(service_client, "rawunzips", input_blob_file_path)
         tmp_input = tempfile.TemporaryFile()
         tmp_input.write(blob.download_blob().readall())
         tmp_input.flush()
         tmp_input.seek(0)
 
+        print("Processing lines")
         for line in self.fec_file_parser.processfile(tmp_input, input_blob_file_path):
             if 'error' in line:
                 simple_linetype = 'error'
@@ -105,12 +111,13 @@ class DailyFileWriter(object):
             tmp_file = self.get_tmpfile(simple_linetype)
             txt_line = f"{dumps(line)}\n".encode()
             tmp_file.writelines([txt_line])
-        
+
         # upload
-        for line_type, fp in self.output_file_types.items():
-            fp.flush()
-            fp.seek(0)
+        print("Uploading")
+        for line_type, orig_fp in self.output_file_types.items():
+            fp = self._convert_to_parquet(orig_fp)
             out_blob_name = self._get_output_blob_name(input_blob_file_path, line_type, datepattern)
+            print(f"Uploading {line_type} to {out_blob_name}")
             out_blob = get_blob_client(service_client, "rawparsed", out_blob_name)
             out_blob.upload_blob(fp, overwrite=True)
 
@@ -120,13 +127,26 @@ class DailyFileWriter(object):
                 'container': 'rawparsed'
             }))
 
+        end = time.time()
+        logging.info(f'Took {end - start} time to run.')
+        print(f'Took {end - start} time to run.')
         return q_msgs
+
+    def _convert_to_parquet(self, fp):
+        fp.flush()
+        fp.seek(0)
+        df = arrowjson.read_json(fp)
+        new_fp = tempfile.TemporaryFile('w+b')
+        parquet.write_table(df, new_fp)
+        new_fp.flush()
+        new_fp.seek(0)
+        return new_fp
 
     def _get_output_blob_name(self, input_blob_file_path : str, line_type : str, datepattern : str):
         split_path = input_blob_file_path.split("/")
         t = "/".join(split_path[:-1])
         orig_file = split_path[-1]
-        orig_file = orig_file.replace(".fec", ".json")
+        orig_file = orig_file.replace(".fec", ".parquet")
         return "/".join([t, line_type, datepattern, orig_file])
     
     def get_tmpfile(self, line_type : str):
@@ -141,5 +161,12 @@ class DailyFileWriter(object):
 if __name__ == "__main__":
     file_parser = build_parser()
     uploader = DailyFileWriter(file_parser)
-    ret = uploader.parse({'datepattern': "20220301", "blobpath": "electronic/1577433.fec"})
-    print(ret)
+    test_work = [
+        {"datepattern": "20220224", "blobpath": "electronic/1571224_7.fec"},
+        {"datepattern": "20220516", "blobpath": "electronic/1594564_14.fec"},
+        {"datepattern": "20220516", "blobpath": "electronic/1594564_15.fec"},
+        {"datepattern": "20220516", "blobpath": "electronic/1594564_36.fec"},
+    ]
+    for work in test_work:
+        ret = uploader.parse(work)
+        print(ret)

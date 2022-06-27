@@ -96,7 +96,7 @@ def upload_file_pool(rawfilename, unzip_tempdir, unzip_request_root, service_cli
     file_size = getsize(filename)
     total_bytes += file_size
 
-    if file_size < 500 * 1000 * 1000: # 500 mb
+    if file_size < 200 * 1000 * 1000: # 200 mb
         created_files.append(remote_file_name)
         upload(service_client, remote_file_name, fh)
     else:
@@ -112,7 +112,7 @@ def split_and_upload(fh, service_client, original_remote_filename):
 
     new_files = []
     total_chars = 0
-    char_limit = 250000000  # 250m chars ~ 250mb
+    char_limit = 150000000  # 150m chars ~ 150mb
     file_num = 0
     out_fh = tempfile.NamedTemporaryFile()
     header_line = ""
@@ -161,4 +161,4 @@ def upload(service_client, remote_filename, fh):
 if __name__ == "__main__":
     import sys
     logging.basicConfig(stream=sys.stdout)
-    print(unzip_and_upload({'blobpath': "electronic/20220221.zip", 'datepattern': '20220221'}))
+    print(unzip_and_upload({"blobpath": "electronic/20220221.zip", "datepattern": "20220221"}))

@@ -2,7 +2,7 @@ import logging
 
 import azure.functions as func
 
-from dataloadlib.write_urls_to_process import write_annual, write_daily
+from dataloadlib.write_urls_to_process import write_annual, write_daily, write_daily_range
 
 
 def main(req: func.HttpRequest, outputQueue: func.Out[func.QueueMessage]) -> func.HttpResponse:
@@ -15,6 +15,10 @@ def main(req: func.HttpRequest, outputQueue: func.Out[func.QueueMessage]) -> fun
 
     for annual_key in req_body.get('annual_keys', []):
         messages.extend(write_annual(annual_key))
+
+    if req_body.get('range'):
+        start, end = req_body.get('range')
+        messages.extend(write_daily_range(start, end))
 
     outputQueue.set(tuple(messages))
 
