@@ -1,14 +1,23 @@
 import json
 import tempfile
+from urllib.error import HTTPError
 import urllib.request
-
+import logging
 from .blob_helpers import get_blob_client, get_service_client
+
+
+logger = logging.getLogger()
 
 
 def download_zip(download_request):
     request_url = download_request['pattern']
     tmpfile_name = tempfile.NamedTemporaryFile()
-    urllib.request.urlretrieve(request_url, tmpfile_name.name)
+    try:
+        urllib.request.urlretrieve(request_url, tmpfile_name.name)
+    except HTTPError:
+        logger.info(f"Failed to retrieve {request_url}")
+        return
+
     tmpfile_name.seek(0)
 
     # upload blob

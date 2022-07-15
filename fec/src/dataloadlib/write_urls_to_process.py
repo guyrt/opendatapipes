@@ -1,4 +1,5 @@
 import json
+import datetime
 
 daily_patterns = [
     {
@@ -67,4 +68,14 @@ def write_annual(year_pattern: str) -> None:
             'yearpattern': year_pattern
         })
         messages.append(message)
+    return messages
+
+
+def write_daily_range(start, end) -> None:
+    messages = []
+    sdate = datetime.datetime.strptime(start, '%Y%m%d')
+    edate = datetime.datetime.strptime(end, '%Y%m%d')
+    dates_in_range = (sdate + datetime.timedelta(days=x) for x in range((edate - sdate).days))
+    for dt in dates_in_range:
+        messages.extend(write_daily(dt.strftime('%Y%m%d')))
     return messages
