@@ -4,23 +4,19 @@ import datetime
 from os.path import join, dirname
 from os import makedirs
 import tempfile
-from pyarrow import csv, parquet
+from pyarrow import csv, parquet, string
 
 output_delimiter = '\t'
 
 
-class LowMemoryFecFileParser(object):
-    """
-    Given a file from the FEC, apply correct definitions.
-    """
+class SchemaHandler(object):
 
-    def __init__(self, definitions, upload_date, line_aggregator):
+    def __init__(self, definitions):
         self.feclookup = definitions
-        self.upload_date = upload_date
-        self.line_aggregator = line_aggregator
         self.schema_cache : dict[str, dict[str, list[str]]]= {}  # file_version => (line type => schema)
 
-    def getschema(self, version, linetype):
+    def get_schema(self, version, linetype):
+        linetype = linetype.upper()
         if linetype in ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'H7']:
             # handle weird data bug
             linetype = 'S' + linetype
@@ -36,6 +32,35 @@ class LowMemoryFecFileParser(object):
 
         final_key = linetype[:i]
         return final_key, versioned_formdata.get(final_key, dict())
+
+    def get_schema_string(self, fileversion, clean_linetype):
+        if fileversion not in self.schema_cache:
+            self.schema_cache[fileversion] = {}
+
+        if clean_linetype not in self.schema_cache[fileversion]:
+            if clean_linetype == 'error':
+                self.schema_cache[fileversion][clean_linetype] = output_delimiter.join(['clean_linetype', 'upload_date', 'linetype', 'error', 'filename']).encode()
+            else:
+                _, schema = self.get_schema(fileversion, clean_linetype)
+                schema = list(schema)
+                schema.insert(0, 'upload_date')
+                schema.insert(0, 'clean_linetype')
+                self.schema_cache[fileversion][clean_linetype] = output_delimiter.join(schema).encode()
+
+        final_value = self.schema_cache[fileversion][clean_linetype]
+        return final_value
+
+
+class LowMemoryFecFileParser(object):
+    """
+    Given a file from the FEC, apply correct definitions.
+    """
+
+    def __init__(self, schema_handler, upload_date, line_aggregator):
+        self.schema_handler = schema_handler
+        self.upload_date = upload_date
+        self.line_aggregator = line_aggregator
+        self.schema_cache : dict[str, dict[str, list[str]]]= {}  # file_version => (line type => schema)
 
     def processfile(self, filehandle, filename):
         """
@@ -68,7 +93,7 @@ class LowMemoryFecFileParser(object):
             line : list[str] = line.split(chr(28))
             line = [l.replace(output_delimiter, ' ') for l in line]
             linetype = line[0]
-            clean_linetype, schema = self.getschema(fileversion, linetype)
+            clean_linetype, schema = self.schema_handler.get_schema(fileversion, linetype)
             
             # Send the line to right place.
             if schema:
@@ -85,24 +110,7 @@ class LowMemoryFecFileParser(object):
                 line = [clean_linetype, self.upload_date, linetype, "NoSchema", filename]
 
             line_out = output_delimiter.join(line)
-            self.write_line(clean_linetype, line_out, self.get_schema_string(fileversion, clean_linetype))
-
-    def get_schema_string(self, fileversion, clean_linetype):
-        if fileversion not in self.schema_cache:
-            self.schema_cache[fileversion] = {}
-
-        if clean_linetype not in self.schema_cache[fileversion]:
-            if clean_linetype == 'error':
-                self.schema_cache[fileversion][clean_linetype] = output_delimiter.join(['clean_linetype', 'upload_date', 'linetype', 'error', 'filename']).encode()
-            else:
-                _, schema = self.getschema(fileversion, clean_linetype)
-                schema = list(schema)
-                schema.insert(0, 'upload_date')
-                schema.insert(0, 'clean_linetype')
-                self.schema_cache[fileversion][clean_linetype] = output_delimiter.join(schema).encode()
-
-        final_value = self.schema_cache[fileversion][clean_linetype]
-        return final_value
+            self.write_line(clean_linetype, line_out, fileversion)
 
     def summarize_schema_cache(self):
         for file_version, cache in self.schema_cache.items():
@@ -111,8 +119,8 @@ class LowMemoryFecFileParser(object):
                 cache_size = len(cache_s)
                 print(f"{file_version}, {line_type}, {cache_size}")
 
-    def write_line(self, clean_linetype : str, line : str, schema_string):
-        self.line_aggregator.write(clean_linetype, line, schema_string)
+    def write_line(self, clean_linetype : str, line : str, fileversion : str):
+        self.line_aggregator.write(clean_linetype, line, fileversion)
 
     def finalize(self):
         self.line_aggregator.finalize()
@@ -120,40 +128,57 @@ class LowMemoryFecFileParser(object):
 
 class LineAggregator(object):
 
-    def __init__(self, dateprefix, converter_handler):
+    def __init__(self, schema_handler, dateprefix, converter_handler):
+        self.schema_handler = schema_handler
         self.dateprefix = dateprefix
-        self.file_pointers : dict[str, tempfile.TemporaryFile]= {}  # lineType -> fp
+        self.file_pointers : dict[str, tempfile.TemporaryFile] = {}  # lineType -> fp
         self.file_sizes : dict[str, int] = {}  # lineType -> current file size 
         self.converter_handler = converter_handler
 
         self.file_size_limit = 1024 * 1024 * 200
 
-    def write(self, clean_linetype : str, line : str, schema: str):
-        if clean_linetype not in self.file_pointers:
-            self._set_file(clean_linetype, schema)
+    def write(self, clean_linetype : str, line : str, file_version: str):
+        # Note that original_schema does not contain our added columns.
+        # It's used in converter to force null types to behave. Our added columns already do.
+        schema_str = self.schema_handler.get_schema_string(file_version, clean_linetype)
+        if not self._get_file(file_version, clean_linetype):
+            self._set_file(file_version, clean_linetype, schema_str)
+
         line = line + '\n'
         line = line.encode()
-        self.file_sizes[clean_linetype] += self.file_pointers[clean_linetype].write(line)
+        self.file_sizes[clean_linetype] += self._get_file(file_version, clean_linetype).write(line)
         
         if self.file_sizes[clean_linetype] > self.file_size_limit:
-            self.converter_handler.convert(clean_linetype, self.file_pointers[clean_linetype])
-            self._set_file(clean_linetype, schema)
+            _, original_schema = self.schema_handler.get_schema(file_version, clean_linetype)
+            self.converter_handler.convert(clean_linetype, self._get_file(file_version, clean_linetype), original_schema)
+            self._set_file(file_version, clean_linetype, schema_str)
 
-    def _set_file(self, clean_linetype, schema):
-        if clean_linetype in self.file_pointers:
-            del self.file_pointers[clean_linetype]
+    def _get_file(self, file_version : str, clean_linetype : str):
+        version_pointers = self.file_pointers.get(file_version)
+        if not version_pointers:
+            return None
+        return version_pointers.get(clean_linetype)
+
+    def _set_file(self, fileversion : str, clean_linetype : str, schema_str : str):
+        if fileversion not in self.file_pointers:
+            self.file_pointers[fileversion] = {}
+
+        if clean_linetype in self.file_pointers[fileversion]:
+            del self.file_pointers[fileversion][clean_linetype]
 
         local_file_handle = tempfile.TemporaryFile()
 
-        self.file_sizes[clean_linetype] = local_file_handle.write(schema)
+        self.file_sizes[clean_linetype] = local_file_handle.write(schema_str)
         local_file_handle.write('\n'.encode())
-        self.file_pointers[clean_linetype] = local_file_handle
+        self.file_pointers[fileversion][clean_linetype] = local_file_handle
         
         return local_file_handle
 
     def finalize(self):
-        for clean_linetype, file_pointer in self.file_pointers.items():
-            self.converter_handler.convert(clean_linetype, file_pointer)
+        for fileversion, pointers in self.file_pointers.items():
+            for clean_linetype, file_pointer in pointers.items():
+                _, original_schema = self.schema_handler.get_schema(fileversion, clean_linetype)
+                self.converter_handler.convert(clean_linetype, file_pointer, original_schema)
         self.file_pointers = {}
         self.file_sizes = {}
 
@@ -164,14 +189,23 @@ class ParquetConverter(object):
         self.root_folder = root_folder
         self.date_pattern = date_pattern
         self.counter = 0
+        self.files = {}  # line type => filenames
 
-    def convert(self, line_type: str, file_pointer):
+    def convert(self, line_type: str, file_pointer, original_schema):
         """Convert a delimited file to parquet"""
-        print(f"Converting {line_type}")
         file_pointer.flush()
         file_pointer.seek(0)
+
+        column_opts_dict = {}
+        for col in original_schema:
+            column_opts_dict[col] = string()
+
         try:
-            df = csv.read_csv(file_pointer, parse_options=csv.ParseOptions(delimiter=output_delimiter))
+            df = csv.read_csv(
+                file_pointer, 
+                parse_options=csv.ParseOptions(delimiter=output_delimiter), 
+                convert_options=csv.ConvertOptions(column_types=column_opts_dict)
+            )
         except Exception:
             print(f"Failed on {line_type}. Dumping")
 
@@ -187,15 +221,23 @@ class ParquetConverter(object):
         makedirs(dirname(local_filename), exist_ok=True)
         new_fp = open(local_filename, 'wb')
 
-        parquet.write_table(df, new_fp)
+        parquet.write_table(df, new_fp, flavor='spark')
         new_fp.close()
         return local_filename   
 
+
+    def consolidate(self):
+        """For each line type, consolidate the folder to a single parquet file and remove nulls"""
+        pass
+
+
+
 def build_parser(fec_definitions, parquet_root, date_pattern):
     utc_timestamp = str(datetime.datetime.utcnow())
+    schema_handler = SchemaHandler(fec_definitions)
     parquet_convert = ParquetConverter(parquet_root, date_pattern)
-    line_aggregator = LineAggregator(date_pattern, parquet_convert)
-    return LowMemoryFecFileParser(fec_definitions, utc_timestamp, line_aggregator)
+    line_aggregator = LineAggregator(schema_handler, date_pattern, parquet_convert)
+    return LowMemoryFecFileParser(schema_handler, utc_timestamp, line_aggregator)
 
 
 def upload(local_path):
