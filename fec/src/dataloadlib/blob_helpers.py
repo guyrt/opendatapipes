@@ -9,7 +9,8 @@ def get_blob_client(service_client : BlobServiceClient, container : str, blob : 
     return bc
 
 
-def get_service_client() -> BlobServiceClient:
-    blob_connection_string = os.environ['FecDataStorageConnectionAppSetting']
+def get_service_client(blob_connection_string=None) -> BlobServiceClient:
+    if blob_connection_string is None:
+        blob_connection_string = os.environ['FecDataStorageConnectionAppSetting']
     service_client = BlobServiceClient.from_connection_string(blob_connection_string)
     return service_client
