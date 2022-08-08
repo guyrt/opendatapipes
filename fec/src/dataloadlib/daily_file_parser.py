@@ -159,14 +159,11 @@ class DailyFileWriter(object):
 
 
 if __name__ == "__main__":
-    file_parser = build_parser()
-    uploader = DailyFileWriter(file_parser)
     test_work = [
-        {"datepattern": "20220224", "blobpath": "electronic/1571224_7.fec"},
-        {"datepattern": "20220516", "blobpath": "electronic/1594564_14.fec"},
-        {"datepattern": "20220516", "blobpath": "electronic/1594564_15.fec"},
-        {"datepattern": "20220516", "blobpath": "electronic/1594564_36.fec"},
+        {"datepattern": "20210801", "blobpath": f"electronic/1533121_{x}.fec"} for x in range(7)
     ]
     for work in test_work:
+        file_parser = build_parser()
+        uploader = DailyFileWriter(file_parser)
         ret = uploader.parse(work)
         print(ret)
