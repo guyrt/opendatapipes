@@ -46,7 +46,8 @@ def proc_row(row):
             name = name.replace("-", "_")
             name = name.replace(",", "_")
             name = name.lower()
-            if name in fec_map[version][form]:
+
+            while name in fec_map[version][form]:
                 name = f'{name}_copy'
             fec_map[version][form].append(name)
 
