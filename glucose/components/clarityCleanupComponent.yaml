@@ -13,10 +13,10 @@ outputs:
   clean_clarity_data:
     type: uri_file
 
-code: .
+code: ./clarityCleanup
 
 environment: 
   image: python
 
 command: >-
-  python clarityCleanup.py --componentA_input ${{inputs.component_a_input}} --componentA_output ${{outputs.component_a_output}}
+  python clarityCleanup.py --raw_clarity_data ${{inputs.raw_clarity_data}} --clean_clarity_data ${{outputs.clean_clarity_data}}

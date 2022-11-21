@@ -1,0 +1,43 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+
+display_name: GlucosePipeline
+description: Pipeline to consolidate glucose and other factors into time series.
+
+settings:
+  default_compute: azureml:smallStandard
+
+outputs:
+  final_pipeline_output:
+    mode: rw_mount
+
+jobs:
+  clean_clarity:
+    type: command
+    component: azureml:clarity_cleanup@latest
+    inputs:
+      raw_clarity_data: 
+        type: uri_folder
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/amitoosweet/paths/clarityUploads
+
+    outputs:
+      clean_clarity_data: ${{parent.outputs.final_pipeline_output}}
+ 
+ 
+        #azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/amitoosweet/paths/cleanClarityTimeseries
+  # component_b:
+  #   type: command
+  #   component: ./componentB.yml
+  #   inputs:
+  #     component_b_input: ${{parent.jobs.component_a.outputs.component_a_output}}
+  #   outputs:
+  #     component_b_output: 
+  #       mode: rw_mount
+  # component_c:
+  #   type: command
+  #   component: ./componentC.yml
+  #   inputs:
+  #     component_c_input: ${{parent.jobs.component_b.outputs.component_b_output}}
+  #   outputs:
+  #     component_c_output: ${{parent.outputs.final_pipeline_output}}
+  #     #  mode: upload

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import os
 
-from azureml.core import Workspace, Dataset, Datastore
+import logging
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--raw_clarity_data", type=str)
@@ -14,18 +14,19 @@ args = parser.parse_args()
 uri = args.raw_clarity_data
 output_uri = args.clean_clarity_data
 
-print(uri)
+
+logging.info(f'URI is {uri}')
 
 # instantiate file system using datastore URI
 fs = AzureMachineLearningFileSystem(uri)
 
 pandas_frames = []
 for path in fs.ls():
-    print(f'Reading from {path}')
+    logging.info(f'Reading from {path}')
     with fs.open(path) as f:
         pandas_frames.append(pd.read_csv(f, header=0))
 
-print(f'concating {len(pandas_frames)} frames')
+logging.info(f'concating {len(pandas_frames)} frames')
 full_df = pd.concat(pandas_frames)
 
 # pull out EGV events only
@@ -75,7 +76,7 @@ egv_events_with_interpolate.reset_index()
 # assert all diffs < 6 mins
 assert egv_events_with_interpolate.timestamp.diff().max() < np.timedelta64(6, 'm')
 
-print(f"Read to save")
+logging.info(f"Ready to save")
 
 with open(os.path.join(output_uri, "cleanClarityTimeseries.parquet"), "wb") as output_file:
     egv_events_with_interpolate.to_parquet(output_file)
