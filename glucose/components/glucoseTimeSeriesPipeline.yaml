@@ -4,6 +4,7 @@ type: pipeline
 display_name: GlucosePipeline
 description: Pipeline to consolidate glucose and other factors into time series.
 
+
 settings:
   default_compute: azureml:smallStandard
 

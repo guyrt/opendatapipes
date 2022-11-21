@@ -1,0 +1,11 @@
+channels:
+- conda-forge
+dependencies:
+- python=3.9
+- pip:
+  - azureml-defaults
+  - azureml-fsspec
+  - mltable
+  - pymc3
+  - numpy
+  - pandas

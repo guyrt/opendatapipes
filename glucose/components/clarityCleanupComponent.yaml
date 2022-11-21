@@ -15,8 +15,7 @@ outputs:
 
 code: ./clarityCleanup
 
-environment: 
-  image: python
+environment: azureml:base-plus-azureml-plus-pymc@latest
 
 command: >-
   python clarityCleanup.py --raw_clarity_data ${{inputs.raw_clarity_data}} --clean_clarity_data ${{outputs.clean_clarity_data}}
