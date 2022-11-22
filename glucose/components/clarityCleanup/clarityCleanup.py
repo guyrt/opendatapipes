@@ -18,13 +18,20 @@ output_uri = args.clean_clarity_data
 logging.info(f'URI is {uri}')
 
 # instantiate file system using datastore URI
-fs = AzureMachineLearningFileSystem(uri)
+# fs = AzureMachineLearningFileSystem(uri)
 
 pandas_frames = []
-for path in fs.ls():
-    logging.info(f'Reading from {path}')
-    with fs.open(path) as f:
-        pandas_frames.append(pd.read_csv(f, header=0))
+# for path in fs.ls():
+#     logging.info(f'Reading from {path}')
+#     with fs.open(path) as f:
+#         pandas_frames.append(pd.read_csv(f, header=0))
+
+arr = os.listdir(uri)
+
+for filename in arr:
+    logging.info(f"reading file: {filename}")
+    with open(os.path.join(uri, filename), "r") as handle:
+        pandas_frames.append(pd.read_csv(handle, header=0))
 
 logging.info(f'concating {len(pandas_frames)} frames')
 full_df = pd.concat(pandas_frames)
@@ -77,6 +84,8 @@ egv_events_with_interpolate.reset_index()
 assert egv_events_with_interpolate.timestamp.diff().max() < np.timedelta64(6, 'm')
 
 logging.info(f"Ready to save")
+
+egv_events_with_interpolate = egv_events_with_interpolate.drop(columns='timestamp_diff')
 
 with open(os.path.join(output_uri, "cleanClarityTimeseries.parquet"), "wb") as output_file:
     egv_events_with_interpolate.to_parquet(output_file)
