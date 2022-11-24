@@ -22,6 +22,7 @@ jobs:
         path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/amitoosweet/paths/clarityUploads
 
     outputs:
+      # todo - change this when you have a downstream!
       clean_clarity_data: ${{parent.outputs.final_pipeline_output}}
  
  

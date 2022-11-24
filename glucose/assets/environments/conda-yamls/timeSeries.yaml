@@ -9,3 +9,4 @@ dependencies:
   - pymc3
   - numpy
   - pandas
+  - pyarrow

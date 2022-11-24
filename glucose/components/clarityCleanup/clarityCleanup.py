@@ -1,5 +1,4 @@
 import argparse
-from azureml.fsspec import AzureMachineLearningFileSystem
 import numpy as np
 import pandas as pd
 import os
@@ -44,6 +43,10 @@ egv_events = egv_events[['Timestamp (YYYY-MM-DDThh:mm:ss)', 'Source Device ID',
 egv_events = egv_events.drop_duplicates(keep='last', subset='Timestamp (YYYY-MM-DDThh:mm:ss)')
 egv_events.columns = ['timestamp_str', 'source_device', 'glucose', 'transmittertime', 'transmitter_id']
 
+# High is an over 400 event. Hopefully these don't happen, but if they do,
+# we will set to null and try to interpolate.
+egv_events['glucose'].replace('High', np.nan, inplace=True)
+
 # interpolate gaps (linear) to get clean 5 mins 
 egv_events['timestamp'] = pd.to_datetime(egv_events['timestamp_str'], format='%Y-%m-%dT%H:%M:%S')
 egv_events['timestamp_diff'] = egv_events.timestamp.diff()
@@ -66,7 +69,7 @@ for low, high in zip(gaps-1, gaps):
             'timestamp_str': str(start_time), 
             'source_device': 'Interpolate',
             'glucose': np.nan,
-            'trasmittertime': -1,
+            'transmittertime': -1,
             'transmitter_id': transmitter_id,
             'timestamp': start_time,
             'timestamp_diff': start_time - previous_start_time
