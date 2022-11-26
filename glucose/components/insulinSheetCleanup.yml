@@ -20,4 +20,4 @@ code: ./insulinFoodSheetCleanup
 environment: azureml:base-plus-azureml-plus-pymc@latest
 
 command: >-
-  python insulinFoodCleanup.py --raw_rawspreadsheet ${{inputs.raw_spreadsheet}} --timezone_switches ${{outputs.timezone_switches}} --insulin_injections ${{outputs.insulin_injections}}
+  python insulinFoodCleanup.py --raw_spreadsheet ${{inputs.raw_spreadsheet}} --timezone_switches ${{outputs.timezone_switches}} --insulin_injections ${{outputs.insulin_injections}}

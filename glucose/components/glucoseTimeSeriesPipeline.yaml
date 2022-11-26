@@ -36,7 +36,7 @@ jobs:
     inputs:
       raw_spreadsheet:
         type: uri_file
-        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/amitoosweet/paths/manualData/spreadsheetLatest.xlsx
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/amitoosweet/paths/manualData/AmITooSweet.xlsx
 
     outputs:
       insulin_injections:
