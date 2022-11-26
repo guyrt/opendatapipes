@@ -12,6 +12,12 @@ outputs:
   final_pipeline_output:
     mode: rw_mount
 
+  timezone_outputs:
+    mode: rw_mount
+
+  insulin_timeline:
+    mode: rw_mount
+
 jobs:
   clean_clarity:
     type: command
@@ -24,9 +30,20 @@ jobs:
     outputs:
       # todo - change this when you have a downstream!
       clean_clarity_data: ${{parent.outputs.final_pipeline_output}}
- 
- 
-        #azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/amitoosweet/paths/cleanClarityTimeseries
+  clean_insulin:
+    type: command
+    component: azureml:insulin_sheet_cleanup@latest
+    inputs:
+      raw_spreadsheet:
+        type: uri_file
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/amitoosweet/paths/manualData/spreadsheetLatest.xlsx
+
+    outputs:
+      insulin_injections:
+        ${{parent.outputs.insulin_timeline}}    
+      timezone_switches:
+        ${{parent.outputs.timezone_outputs}}    
+
   # component_b:
   #   type: command
   #   component: ./componentB.yml

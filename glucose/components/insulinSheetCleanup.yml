@@ -1,0 +1,23 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+
+name: insulin_sheet_cleanup
+display_name: SpreadsheetCleanup
+version: 1
+
+inputs:
+  raw_spreadsheet:
+    type: uri_file
+
+outputs:
+  insulin_injections:
+    type: uri_file
+  timezone_switches:
+    type: uri_file
+
+code: ./insulinFoodSheetCleanup
+
+environment: azureml:base-plus-azureml-plus-pymc@latest
+
+command: >-
+  python insulinFoodCleanup.py --raw_rawspreadsheet ${{inputs.raw_spreadsheet}} --timezone_switches ${{outputs.timezone_switches}} --insulin_injections ${{outputs.insulin_injections}}
