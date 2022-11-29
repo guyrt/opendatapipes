@@ -1,0 +1,23 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+
+display_name: FecUnzipPipeline
+description: Pipeline to extract data and merge it all the way to delta
+
+
+settings:
+  default_compute: azureml:smallStandard
+
+outputs:
+  fec_file_temp:
+    mode: rw_mount
+
+jobs:
+  fec_unzip:
+    type: command
+    component: azureml:fec_unzip@latest
+    inputs:
+      run_date: 20221101
+
+    outputs:
+      unzipped_fec_files: ${{parent.outputs.fec_file_temp}}

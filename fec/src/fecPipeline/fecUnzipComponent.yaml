@@ -1,0 +1,20 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+
+name: fec_unzip
+display_name: DownloadAndUnzip
+
+inputs:
+  run_date:
+    type: string
+
+outputs:
+  unzipped_fec_files:
+    type: uri_folder
+
+code: ./unzipComponent
+
+environment: azureml:base-plus-fecpipeline@latest
+
+command: >-
+  python unzip.py --run_date ${{inputs.run_date}} --unzipped_fec_files ${{outputs.unzipped_fec_files}}

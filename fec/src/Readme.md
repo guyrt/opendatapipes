@@ -1,10 +1,7 @@
-This project uses Azure Functions to download raw files, unzip them, and eventually push them into json-encoded blobs that are picked up by a Spark job for further processing.
+To launch pipelines:
 
-Spark notes:
+`az ml environment create --file .\fecPipelineEnv.yml --resource-group rg-fecdata --workspace fecaml`
 
-Need to decide on a final partition. All data for a single candidate seems more likely than all data for a single date, so create SA-SH tables partitioned by candidate/committee (filer - col 2 in the table)
-
-delta - create if not exists? look up how to insert!
 
 
 Project notes:
