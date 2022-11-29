@@ -18,6 +18,9 @@ jobs:
     component: azureml:fec_unzip@latest
     inputs:
       run_date: 20221101
+      metadata_dataset:
+        type: uri_file
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/fecmetadata/paths/fecfileformats/rawparserdata.json
 
     outputs:
       unzipped_fec_files: ${{parent.outputs.fec_file_temp}}

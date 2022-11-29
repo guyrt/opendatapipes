@@ -7,6 +7,8 @@ display_name: DownloadAndUnzip
 inputs:
   run_date:
     type: string
+  metadata_dataset:
+    type: uri_file
 
 outputs:
   unzipped_fec_files:
@@ -17,4 +19,4 @@ code: ./unzipComponent
 environment: azureml:base-plus-fecpipeline@latest
 
 command: >-
-  python unzip.py --run_date ${{inputs.run_date}} --unzipped_fec_files ${{outputs.unzipped_fec_files}}
+  python unzip.py --run_date ${{inputs.run_date}} --metadata_dataset ${{inputs.metadata_dataset}} --unzipped_fec_files ${{outputs.unzipped_fec_files}}

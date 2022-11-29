@@ -7,24 +7,12 @@ import shutil
 import tempfile
 import zipfile
 
-from azureml.core import Workspace, Dataset
 from os import listdir, makedirs
 from os.path import dirname, join
 
 from pyarrow import csv, parquet
 
 output_delimiter = '\t'
-
-subscription_id = 'f48a2553-c966-4d06-8faa-c5096da10254'
-resource_group = 'rg-fecdata'
-workspace_name = 'fecaml'
-
-workspace = Workspace(subscription_id, resource_group, workspace_name)
-
-datastore = workspace.datastores['fecrawzips']
-
-metadata_dataset = Dataset.get_by_name(workspace, name='fecfileformats')
-local_metadata_dataset = metadata_dataset.download()[0]
 
 
 class SchemaHandler(object):
@@ -309,10 +297,13 @@ def download_file(url, local_filename):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--run_date", type=str)
+parser.add_argument("--metadata_dataset", type=str)
+
 parser.add_argument("--unzipped_fec_files", type=str)
 args = parser.parse_args()
 
 datepattern = args.run_date
+local_metadata_dataset = args.metadata_dataset
 output_folder_uri = args.unzipped_fec_files
 
 logging.info(f"Working on {datepattern}")
