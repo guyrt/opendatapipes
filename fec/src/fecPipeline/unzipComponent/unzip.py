@@ -8,9 +8,9 @@ import tempfile
 import zipfile
 
 from os import listdir, makedirs
-from os.path import dirname, join
+from os.path import basename, dirname, join
 
-from pyarrow import csv, parquet
+from pyarrow import csv, parquet, string
 
 output_delimiter = '\t'
 
@@ -111,7 +111,7 @@ class LowMemoryFecFileParser(object):
 
                 line.insert(0, self.upload_date)
                 line.insert(0, clean_linetype)
-                line.append(ntpath.basename(filename))
+                line.append(basename(filename))
             else:
                 clean_linetype = 'error'
                 logging.info(f"Error row: {line}")
@@ -282,11 +282,12 @@ def process_file(fec_definitions, files, datepattern, unzip_tempdir):
         parquet_folder.cleanup()
     
 
-def download_file(url, local_filename):
+def download_file(url, local_folder_name):
+    local_file_name = join(local_folder_name, "localzip.zip")
     with requests.get(url, stream=True) as r:
-        with open(local_filename, 'wb') as f:
-            shutil.copyfileobj(r.raw, f)
-    return local_filename
+        with open(local_file_name, 'wb') as local_file:
+            shutil.copyfileobj(r.raw, local_file)
+    return local_file_name
 
 # inputs:
 # date to run on
@@ -313,13 +314,14 @@ logging.info(f"Working on {datepattern}")
 
 # todo - download file from FEC from the above address.
 fec_url = f'https://cg-519a459a-0ea3-42c2-b7bc-fa1143481f74.s3-us-gov-west-1.amazonaws.com/bulk-downloads/electronic/{datepattern}.zip'
-downloaded_file = download_file(fec_url)
+first_download_folder = get_tempdir("first_download")
+downloaded_file_name = download_file(fec_url, first_download_folder.name)
 
-unzip_tempdir = get_tempdir("rawdownload")
-with zipfile.ZipFile(open(downloaded_file, 'rb')) as zipObj:
+unzip_tempdir = get_tempdir("raw_zip")
+with zipfile.ZipFile(open(downloaded_file_name, 'rb')) as zipObj:
     zipObj.extractall(unzip_tempdir.name)
 
 fec_definitions = json.loads(open(local_metadata_dataset, 'r').read())
 files = listdir(unzip_tempdir.name)
-process_file(files, datepattern, unzip_tempdir)
+process_file(fec_definitions, files, datepattern, unzip_tempdir)
 unzip_tempdir.cleanup()

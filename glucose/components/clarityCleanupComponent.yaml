@@ -3,7 +3,6 @@ type: command
 
 name: clarity_cleanup
 display_name: ClarityCleanup
-version: 1
 
 inputs:
   raw_clarity_data:

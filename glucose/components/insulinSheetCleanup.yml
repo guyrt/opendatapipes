@@ -3,7 +3,6 @@ type: command
 
 name: insulin_sheet_cleanup
 display_name: SpreadsheetCleanup
-version: 1
 
 inputs:
   raw_spreadsheet:
