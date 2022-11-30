@@ -1,7 +1,7 @@
 import argparse
 import datetime
-import logging
 import json
+import os
 import requests
 import shutil
 import tempfile
@@ -114,7 +114,7 @@ class LowMemoryFecFileParser(object):
                 line.append(basename(filename))
             else:
                 clean_linetype = 'error'
-                logging.info(f"Error row: {line}")
+                print(f"Error row: {line}")
                 line = [clean_linetype, self.upload_date, linetype, "NoSchema", filename]
 
             line_out = output_delimiter.join(line)
@@ -125,7 +125,7 @@ class LowMemoryFecFileParser(object):
             for line_type, final_cache in cache.items():
                 cache_s = final_cache.decode().split(output_delimiter)
                 cache_size = len(cache_s)
-                logging.info(f"{file_version}, {line_type}, {cache_size}")
+                print(f"{file_version}, {line_type}, {cache_size}")
 
     def write_line(self, clean_linetype : str, line : str, fileversion : str):
         self.line_aggregator.write(clean_linetype, line, fileversion)
@@ -215,7 +215,7 @@ class ParquetConverter(object):
                 convert_options=csv.ConvertOptions(column_types=column_opts_dict)
             )
         except Exception:
-            logging.info(f"Failed on {line_type}. Dumping")
+            print(f"Failed on {line_type}. Dumping")
 
             emh = open('/tmp/emergency_dump.csv', 'wb')
             file_pointer.seek(0)
@@ -249,17 +249,23 @@ def build_parser(fec_definitions, parquet_root, date_pattern):
 
 
 def upload(local_path):
-    logging.info(f'Uploading {local_path} to {output_folder_uri}')
-    for filename in listdir(local_path):
-        output_uri = join(output_folder_uri, filename)
-        with open(output_uri, 'wb') as out_file:
-            with open(filename, 'rb') as in_file:
-                out_file.write(in_file.read())
+    print(f'Uploading {local_path} to {output_folder_uri}')
+    for local_folder in listdir(local_path):
+        full_local_folder = join(local_path, local_folder)
+        for filename in listdir(full_local_folder):
+            full_filename = join(full_local_folder, filename)
+            output_uri = join(output_folder_uri, local_folder, filename)
+            os.mkdir(join(output_folder_uri, local_folder))
+            # TODO this worked on folders. Need to work on files. update both!
+            with open(output_uri, 'wb') as out_file:
+                print(f'Opening {full_filename}')
+                with open(full_filename, 'rb') as in_file:
+                    out_file.write(in_file.read())
 
 
 def get_tempdir(reason):
     td = tempfile.TemporaryDirectory()
-    logging.info(f"Got {td.name} for {reason}")
+    print(f"Got {td.name} for {reason}")
     return td
 
 
@@ -267,7 +273,7 @@ def process_file(fec_definitions, files, datepattern, unzip_tempdir):
     parquet_folder = get_tempdir("parquet_folder")
     parser = build_parser(fec_definitions, parquet_folder.name, datepattern)
 
-    logging.info(f"Starting to operate on {len(files)} files")
+    print(f"Starting to operate on {len(files)} files")
     try:
         for rawfilename in files:
             # run in blocks of 100 files, or otherwise watch for full disk. On full/100 then run convert/upload then cleanup/recreate
@@ -278,7 +284,7 @@ def process_file(fec_definitions, files, datepattern, unzip_tempdir):
         parser.finalize()
         upload(parquet_folder.name)
     finally:
-        logging.info("Cleaning up")
+        print("Cleaning up")
         parquet_folder.cleanup()
     
 
@@ -307,7 +313,7 @@ datepattern = args.run_date
 local_metadata_dataset = args.metadata_dataset
 output_folder_uri = args.unzipped_fec_files
 
-logging.info(f"Working on {datepattern}")
+print(f"Working on {datepattern}")
 
 #ds = Dataset.File.from_files((datastore, f'electronic/{datepattern}.zip'))
 #downloaded_files = ds.download()
