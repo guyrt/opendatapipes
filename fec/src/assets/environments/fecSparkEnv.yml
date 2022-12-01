@@ -1,0 +1,5 @@
+$schema: https://azuremlschemas.azureedge.net/latest/environment.schema.json
+name: fec-spark
+image: datamechanics/spark:3.2-latest
+conda_file: conda-yamls/fecSpark.yml
+description: Env with requirements for fec Spark

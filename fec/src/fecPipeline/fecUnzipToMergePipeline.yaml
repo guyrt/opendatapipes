@@ -21,6 +21,10 @@ jobs:
       metadata_dataset:
         type: uri_file
         path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/fecmetadata/paths/rawparserdata.json
-
     outputs:
       unzipped_fec_files: ${{parent.outputs.fec_file_temp}}
+  delta_merge:
+    type: command
+    component: azureml:fec_delta_merge@latest
+    inputs:
+      unzipped_fec_files: ${{parent.jobs.fec_unzip.outputs.unzipped_fec_files}}

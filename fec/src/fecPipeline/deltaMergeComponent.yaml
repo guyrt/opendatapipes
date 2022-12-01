@@ -1,0 +1,16 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+type: command
+
+name: fec_delta_merge
+display_name: DeltaMerge
+
+inputs:
+  unzipped_fec_files:
+    type: uri_folder
+
+code: ./deltaMergeComponent
+
+environment: azureml:fec-spark@latest
+
+command: >-
+  python merge.py --unzipped_fec_files ${{inputs.unzipped_fec_files}}

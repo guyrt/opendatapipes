@@ -1,11 +1,10 @@
 channels:
 - conda-forge
 dependencies:
-- python=3.9
+- python=3.8
 - pip:
   - azureml-defaults
   - azureml-fsspec
   - pyarrow
-  - requests
-  - pyspark>=3.3
-
+  - pyspark==3.2.1
+  - delta-spark
