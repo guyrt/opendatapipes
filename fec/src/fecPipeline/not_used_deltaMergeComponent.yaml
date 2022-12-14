@@ -1,3 +1,7 @@
+# This isn't used!!! 
+
+# Spark is submitted directly in fecUnzipToMergePipeline.yaml.
+
 $schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
 type: command
 
@@ -7,10 +11,13 @@ display_name: DeltaMerge
 inputs:
   unzipped_fec_files:
     type: uri_folder
+outputs:
+  delta_uri:
+    type: uri_folder
 
 code: ./deltaMergeComponent
 
 environment: azureml:fec-spark@latest
 
 command: >-
-  python merge.py --unzipped_fec_files ${{inputs.unzipped_fec_files}}
+  python merge.py --unzipped_fec_files ${{inputs.unzipped_fec_files}} --delta_uri ${{outputs.delta_uri}}

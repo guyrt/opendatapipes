@@ -24,7 +24,31 @@ jobs:
     outputs:
       unzipped_fec_files: ${{parent.outputs.fec_file_temp}}
   delta_merge:
-    type: command
-    component: azureml:fec_delta_merge@latest
+    # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
+    # need to upload my code? **Try code locally.**
+    type: spark
+    compute: azureml:smallTestSpark
+    conf:
+      spark.executor.instances: "1"
+      spark.driver.memory: "1g"
+      spark.driver.cores: "2"
+      spark.executor.memory: "4g"
+      spark.executor.cores: "2"
+    code: "./deltaMergeComponent"
+    entry:
+      file: "merge.py"
+#    component: azureml:fec_delta_merge@latest
     inputs:
-      unzipped_fec_files: ${{parent.jobs.fec_unzip.outputs.unzipped_fec_files}}
+      unzipped_fec_files: 
+        path: ${{parent.jobs.fec_unzip.outputs.unzipped_fec_files}}
+        type: uri_folder
+        mode: direct
+    outputs:
+      delta_uri: 
+        type: uri_folder
+        mode: direct
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/tables
+    args: >-
+       --unzipped_fec_files ${{inputs.unzipped_fec_files}} 
+       --delta_uri ${{outputs.delta_uri}}
+    
