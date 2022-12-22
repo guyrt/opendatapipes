@@ -182,5 +182,3 @@ base_table.alias('target').merge(
     .whenNotMatchedInsertAll() \
     .execute()
 
-with open(os.path.join(output_uri, "gate.txt"), 'w') as out_file:
-    out_file.write("completed")

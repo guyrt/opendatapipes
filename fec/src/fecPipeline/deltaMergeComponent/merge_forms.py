@@ -168,6 +168,3 @@ base_table.alias('target').merge(
     .whenMatchedUpdateAll() \
     .whenNotMatchedInsertAll() \
     .execute()
-
-with open(os.path.join(output_uri, "gate.txt"), 'w') as out_file:
-    out_file.write("completed")

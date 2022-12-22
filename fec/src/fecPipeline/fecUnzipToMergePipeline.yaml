@@ -45,9 +45,9 @@ jobs:
         mode: direct
     outputs:
       side_effect_done_file:
-        type: uri_folder
+        type: uri_file
         mode: direct
-        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/forms
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/forms.txt
       delta_uri:
         type: uri_folder
         mode: direct
@@ -81,9 +81,10 @@ jobs:
         mode: direct
     outputs:
       side_effect_done_file:
-        type: uri_folder
+        type: uri_file
         mode: direct
-        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/sa
+        # had to premake the folder for this to work.
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/sa.txt
       delta_uri:
         type: uri_folder
         mode: direct
