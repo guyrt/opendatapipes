@@ -4,8 +4,6 @@ import os
 import pyspark.sql.functions as F
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import IntegerType
-from pyspark.sql.utils import AnalysisException
 from pyspark.sql.window import Window
 
 sc = SparkSession.builder \
@@ -82,6 +80,11 @@ print(f"AllForms path: {forms_path}")
 
 base_table = DeltaTable.forPath(sc, forms_path)
 filers_df = base_table.toDF()
+filers_df.printSchema()
+
+# convert all column names
+for col in filers_df.columns:
+    filers_df = filers_df.withColumnRenamed(col, f"{col}_formdf")
 
 dfsa = read_folder(unzipped_fec_folder, "SA")
 dfsaj = join_to_forms(dfsa, filers_df)
@@ -99,6 +102,9 @@ for col_to_lower in ['contributor_organization_name', 'contributor_last_name', '
 w2 = Window.partitionBy("filer_committee_id_number", "transaction_id", "YEAR", "MONTH").orderBy(F.col("upload_date").desc())
 dfsaj = dfsaj.withColumn("__row__", F.row_number().over(w2)) \
   .filter(F.col("__row__") == 1).drop("__row__")
+
+dfsaj = dfsaj.withColumn("original_file_formdf", F.lit(""))
+dfsaj.printSchema()
 
 # Define Forms table
 sc.sql(f"""
@@ -165,7 +171,6 @@ CREATE TABLE IF NOT EXISTS SA (
     date_of_election_formdf STRING,
     state_of_election_formdf STRING,
     date_signed_formdf STRING,
-    original_file_formdf STRING,
     earmarks STRING,
     YEAR STRING,
     MONTH STRING)
@@ -175,6 +180,7 @@ LOCATION '{os.path.join(delta_uri, "SA")}'
 """)
 
 base_table = DeltaTable.forPath(sc, os.path.join(delta_uri, 'SA'))
+base_table.toDF().printSchema()
 base_table.alias('target').merge(
     dfsaj.alias('updates'), 
     "target.filer_committee_id_number == updates.filer_committee_id_number AND target.transaction_id == updates.transaction_id AND target.YEAR == updates.YEAR AND target.MONTH == updates.MONTH" ) \
