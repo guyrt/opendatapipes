@@ -256,7 +256,6 @@ def upload(local_path):
             full_filename = join(full_local_folder, filename)
             output_uri = join(output_folder_uri, local_folder, filename)
             os.mkdir(join(output_folder_uri, local_folder))
-            # TODO this worked on folders. Need to work on files. update both!
             with open(output_uri, 'wb') as out_file:
                 print(f'Opening {full_filename}')
                 with open(full_filename, 'rb') as in_file:

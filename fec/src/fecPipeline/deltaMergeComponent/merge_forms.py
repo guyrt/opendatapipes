@@ -9,17 +9,19 @@ from pyspark.sql.utils import AnalysisException
 from pyspark.sql.window import Window
 
 sc = SparkSession.builder \
-            .master("local[4]") \
-            .appName("fecDelta") \
+            .appName("fecDeltaForms") \
             .getOrCreate()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--unzipped_fec_files", type=str)
+parser.add_argument("--side_effect_done_file", type=str)
 parser.add_argument("--delta_uri", type=str)
 args = parser.parse_args()
 
 unzipped_fec_folder = args.unzipped_fec_files
 delta_uri = args.delta_uri
+output_uri = args.side_effect_done_file
+
 
 print(f"Running on {unzipped_fec_folder}")
 
@@ -138,6 +140,8 @@ assert df_forms_counts[0].__getitem__('max(count)') == 1, "No duplicate committe
 filer_df_final = filers_df.select([F.col(c).alias(c.replace("_formdf", "")) for c in filers_df.columns])
 
 # Define Forms table
+forms_path = os.path.join(delta_uri, "AllForms")
+print(f"AllForms path: {forms_path}")
 sc.sql(f"""
 CREATE TABLE IF NOT EXISTS AllForms (
     clean_linetype STRING, 
@@ -154,10 +158,10 @@ CREATE TABLE IF NOT EXISTS AllForms (
     state_of_election STRING,
     date_signed STRING )
 USING DELTA
-LOCATION '{os.path.join(delta_uri, "AllForms")}'
+LOCATION '/tables/AllForms'
 """)
 
-base_table = DeltaTable.forPath(sc, f'{delta_uri}/AllForms')
+base_table = DeltaTable.forPath(sc, forms_path)
 base_table.alias('target').merge(
     filer_df_final.alias('updates'), 
     "target.filer_committee_id_number == updates.filer_committee_id_number") \
@@ -165,107 +169,5 @@ base_table.alias('target').merge(
     .whenNotMatchedInsertAll() \
     .execute()
 
-# SA Delta upload
-
-# These come from a terminated account and can be found in Form 4.
-
-dfsa = read_folder(unzipped_fec_folder, "SA")
-dfsaj = join_to_forms(dfsa, filers_df)
-nulls_remain = dfsaj.filter(F.col('upload_date_formdf').isNull())
-print(nulls_remain.count())
-nulls_remain.select('form_type', 'filer_committee_id_number').head(5)
-
-dfsaj = dfsaj.cache()
-dfsaj = extract_earmarks(dfsaj)
-dfsaj = add_partitions(dfsaj, 'contribution_date')
-for col_to_lower in ['contributor_organization_name', 'contributor_last_name', 'contributor_first_name', 'contributor_middle_name', 'contributor_prefix', 'contributor_suffix', 'contributor_street_1', 'contributor_street_2', 'contributor_city', 'contributor_state', 'contributor_zip', 'contribution_purpose_descrip', 'contributor_employer', 'contributor_occupation', 'donor_committee_fec_id', 'donor_committee_name', 'donor_candidate_fec_id', 'donor_candidate_last_name', 'donor_candidate_first_name', 'donor_candidate_middle_name', 'donor_candidate_prefix', 'donor_candidate_suffix', 'donor_candidate_office', 'donor_candidate_state', 'donor_candidate_district', 'conduit_name', 'conduit_street1', 'conduit_street1_copy', 'conduit_street2', 'conduit_city', 'conduit_state', 'conduit_zip', 'memo_code', 'memo_textdescription']:
-    dfsaj = with_lower_case(dfsaj, col_to_lower)
-
-# enforce no duplicates
-w2 = Window.partitionBy("filer_committee_id_number", "transaction_id", "YEAR", "MONTH").orderBy(F.col("upload_date").desc())
-dfsaj = dfsaj.withColumn("__row__", F.row_number().over(w2)) \
-  .filter(F.col("__row__") == 1).drop("__row__")
-
-# Define Forms table
-sc.sql(f"""
-CREATE TABLE IF NOT EXISTS SA (
-    clean_linetype STRING,
-    upload_date STRING,
-    form_type STRING,
-    filer_committee_id_number STRING,
-    transaction_id STRING,
-    back_reference_tran_id_number STRING,
-    back_reference_sched_name STRING,
-    entity_type STRING,
-    contributor_organization_name STRING,
-    contributor_last_name STRING,
-    contributor_first_name STRING,
-    contributor_middle_name STRING,
-    contributor_prefix STRING,
-    contributor_suffix STRING,
-    contributor_street_1 STRING,
-    contributor_street_2 STRING,
-    contributor_city STRING,
-    contributor_state STRING,
-    contributor_zip STRING,
-    election_code STRING,
-    election_other_description STRING,
-    contribution_date STRING,
-    contribution_amount_f3l_bundled STRING,
-    annual_bundled STRING,
-    contribution_purpose_descrip STRING,
-    contributor_employer STRING,
-    contributor_occupation STRING,
-    donor_committee_fec_id STRING,
-    donor_committee_name STRING,
-    donor_candidate_fec_id STRING,
-    donor_candidate_last_name STRING,
-    donor_candidate_first_name STRING,
-    donor_candidate_middle_name STRING,
-    donor_candidate_prefix STRING,
-    donor_candidate_suffix STRING,
-    donor_candidate_office STRING,
-    donor_candidate_state STRING,
-    donor_candidate_district STRING,
-    conduit_name STRING,
-    conduit_street1 STRING,
-    conduit_street1_copy STRING,
-    conduit_street2 STRING,
-    conduit_city STRING,
-    conduit_state STRING,
-    conduit_zip STRING,
-    memo_code STRING,
-    memo_textdescription STRING,
-    reference_to_si_or_sl_system_code_that_identifies_the_account STRING,
-    clean_linetype_formdf STRING,
-    filename STRING,
-    upload_date_formdf STRING,
-    filer_committee_id_number_formdf STRING,
-    committee_name_formdf STRING,
-    street_1_formdf STRING,
-    street_2_formdf STRING,
-    city_formdf STRING,
-    state_formdf STRING,
-    zip_formdf STRING,
-    report_code_formdf STRING,
-    date_of_election_formdf STRING,
-    state_of_election_formdf STRING,
-    date_signed_formdf STRING,
-    original_file_formdf STRING,
-    earmarks STRING,
-    YEAR STRING,
-    MONTH STRING,
-    COMMITTEE_PARTITION STRING )
-USING DELTA
-PARTITIONED BY (YEAR, MONTH, COMMITTEE_PARTITION)
-LOCATION '{os.path.join(delta_uri, "SA")}'
-""")
-
-base_table = DeltaTable.forPath(sc, os.path.join(delta_uri, 'SA'))
-base_table.alias('target').merge(
-    dfsaj.alias('updates'), 
-    "target.filer_committee_id_number == updates.filer_committee_id_number AND target.transaction_id == updates.transaction_id AND target.YEAR == updates.YEAR AND target.MONTH == updates.MONTH" ) \
-    .whenMatchedUpdateAll() \
-    .whenNotMatchedInsertAll() \
-    .execute()
-
+with open(os.path.join(output_uri, "gate.txt"), 'w') as out_file:
+    out_file.write("completed")
