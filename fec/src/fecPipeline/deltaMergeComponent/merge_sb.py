@@ -7,14 +7,14 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.window import Window
 
 sc = SparkSession.builder \
-            .appName("fecDeltaSA") \
+            .appName("fecDeltaSB") \
             .getOrCreate()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--unzipped_fec_files", type=str)
 parser.add_argument("--delta_uri", type=str)
 parser.add_argument("--forms_done_gate", type=str)  # gate only - not used.
-parser.add_argument("--side_effect_done_file", type=str)
+parser.add_argument("--side_effect_done_file", type=str)  # gate only
 args = parser.parse_args()
 
 unzipped_fec_folder = args.unzipped_fec_files
@@ -40,20 +40,6 @@ def join_to_forms(df : DataFrame, df_forms : DataFrame):
     dfj.cache()
     assert df.count() == dfj.count()
     return dfj
-
-
-def extract_earmarks(df):
-    # WinRed
-    winred_col = 'contribution_purpose_descrip'
-    actblue_col = 'memo_code'
-
-    df = df.withColumn("__winred__", F.regexp_extract(F.col(winred_col), "\((c\d+)\)", 1))
-    df = df.withColumn("__actblue__", F.regexp_extract(F.col(actblue_col), "\((c\d+)\)", 1))
-
-    df = df.withColumn("earmarks", F.when(F.col("__winred__") != '', F.col("__winred__")).when(F.col("__actblue__") != '', F.col("__actblue__")).otherwise(''))
-    df = df.drop("__winred__").drop("__actblue__")
-    df = df.withColumn("earmarks", F.upper(F.col("earmarks")))
-    return df
 
 
 def with_lower_case(df, col_name, tmp_col_name='_tmp'):
@@ -86,70 +72,68 @@ filers_df.printSchema()
 for col in filers_df.columns:
     filers_df = filers_df.withColumnRenamed(col, f"{col}_formdf")
 
-dfsa = read_folder(unzipped_fec_folder, "SA")
-dfsaj = join_to_forms(dfsa, filers_df)
-nulls_remain = dfsaj.filter(F.col('upload_date_formdf').isNull())
+dfsb = read_folder(unzipped_fec_folder, "SB")
+dfsbj = join_to_forms(dfsb, filers_df)
+nulls_remain = dfsbj.filter(F.col('upload_date_formdf').isNull())
 print(nulls_remain.count())
 
-dfsaj = dfsaj.cache()
-dfsaj = extract_earmarks(dfsaj)
-dfsaj = add_partitions(dfsaj, 'contribution_date')
+dfsbj = dfsbj.cache()
+dfsbj = add_partitions(dfsbj, 'expenditure_date')
 for col_to_lower in ['contributor_organization_name', 'contributor_last_name', 'contributor_first_name', 'contributor_middle_name', 'contributor_prefix', 'contributor_suffix', 'contributor_street_1', 'contributor_street_2', 'contributor_city', 'contributor_state', 'contributor_zip', 'contribution_purpose_descrip', 'contributor_employer', 'contributor_occupation', 'donor_committee_fec_id', 'donor_committee_name', 'donor_candidate_fec_id', 'donor_candidate_last_name', 'donor_candidate_first_name', 'donor_candidate_middle_name', 'donor_candidate_prefix', 'donor_candidate_suffix', 'donor_candidate_office', 'donor_candidate_state', 'donor_candidate_district', 'conduit_name', 'conduit_street1', 'conduit_street1_copy', 'conduit_street2', 'conduit_city', 'conduit_state', 'conduit_zip', 'memo_code', 'memo_textdescription']:
-    dfsaj = with_lower_case(dfsaj, col_to_lower)
+    dfsbj = with_lower_case(dfsbj, col_to_lower)
 
 # enforce no duplicates
 w2 = Window.partitionBy("filer_committee_id_number", "transaction_id", "YEAR", "MONTH").orderBy(F.col("upload_date").desc())
-dfsaj = dfsaj.withColumn("__row__", F.row_number().over(w2)) \
+dfsbj = dfsbj.withColumn("__row__", F.row_number().over(w2)) \
   .filter(F.col("__row__") == 1).drop("__row__")
 
-dfsaj = dfsaj.withColumn("original_file_formdf", F.lit(""))
-dfsaj.printSchema()
+dfsbj = dfsbj.withColumn("original_file_formdf", F.lit(""))
+dfsbj.printSchema()
 
 # Define Forms table
 sc.sql(f"""
-CREATE TABLE IF NOT EXISTS SA (
+
     clean_linetype STRING,
     upload_date STRING,
     form_type STRING,
     filer_committee_id_number STRING,
-    transaction_id STRING,
+    transaction_id_number STRING,
     back_reference_tran_id_number STRING,
     back_reference_sched_name STRING,
     entity_type STRING,
-    contributor_organization_name STRING,
-    contributor_last_name STRING,
-    contributor_first_name STRING,
-    contributor_middle_name STRING,
-    contributor_prefix STRING,
-    contributor_suffix STRING,
-    contributor_street_1 STRING,
-    contributor_street_2 STRING,
-    contributor_city STRING,
-    contributor_state STRING,
-    contributor_zip STRING,
+    payee_organization_name STRING,
+    payee_last_name STRING,
+    payee_first_name STRING,
+    payee_middle_name STRING,
+    payee_prefix STRING,
+    payee_suffix STRING,
+    payee_street_1 STRING,
+    payee_street_2 STRING,
+    payee_city STRING,
+    payee_state STRING,
+    payee_zip STRING,
     election_code STRING,
     election_other_description STRING,
-    contribution_date STRING,
-    contribution_amount_f3l_bundled STRING,
-    annual_bundled STRING,
-    contribution_purpose_descrip STRING,
-    contributor_employer STRING,
-    contributor_occupation STRING,
-    donor_committee_fec_id STRING,
-    donor_committee_name STRING,
-    donor_candidate_fec_id STRING,
-    donor_candidate_last_name STRING,
-    donor_candidate_first_name STRING,
-    donor_candidate_middle_name STRING,
-    donor_candidate_prefix STRING,
-    donor_candidate_suffix STRING,
-    donor_candidate_office STRING,
-    donor_candidate_state STRING,
-    donor_candidate_district STRING,
+    expenditure_date STRING,
+    expenditure_amount_f3l_bundled STRING,
+    annual_refunded_bundled_amt STRING,
+    expenditure_purpose_descrip STRING,
+    category_code STRING,
+    beneficiary_committee_fec_id STRING,
+    beneficiary_committee_name STRING,
+    beneficiary_candidate_fec_id STRING,
+    beneficiary_candidate_last_name STRING,
+    beneficiary_candidate_first_name STRING,
+    beneficiary_candidate_middle_name STRING,
+    beneficiary_candidate_prefix STRING,
+    beneficiary_candidate_suffix STRING,
+    beneficiary_candidate_office STRING,
+    beneficiary_candidate_state STRING,
+    beneficiary_candidate_district STRING,
     conduit_name STRING,
-    conduit_street1 STRING,
-    conduit_street1_copy STRING,
-    conduit_street2 STRING,
+    conduit_street_1 STRING,
+    conduit_street_2 STRING,
+    conduit_street_2_copy STRING,
     conduit_city STRING,
     conduit_state STRING,
     conduit_zip STRING,
@@ -157,7 +141,6 @@ CREATE TABLE IF NOT EXISTS SA (
     memo_textdescription STRING,
     reference_to_si_or_sl_system_code_that_identifies_the_account STRING,
     clean_linetype_formdf STRING,
-    filename STRING,
     upload_date_formdf STRING,
     filer_committee_id_number_formdf STRING,
     committee_name_formdf STRING,
@@ -170,18 +153,18 @@ CREATE TABLE IF NOT EXISTS SA (
     date_of_election_formdf STRING,
     state_of_election_formdf STRING,
     date_signed_formdf STRING,
-    earmarks STRING,
+    original_file_formdf STRING,
     YEAR STRING,
-    MONTH STRING)
+    MONTH STRING )
 USING DELTA
 PARTITIONED BY (YEAR, MONTH)
-LOCATION '{os.path.join(delta_uri, "SA")}'
+LOCATION '{os.path.join(delta_uri, "SB")}'
 """)
 
-base_table = DeltaTable.forPath(sc, os.path.join(delta_uri, 'SA'))
+base_table = DeltaTable.forPath(sc, os.path.join(delta_uri, 'SB'))
 base_table.toDF().printSchema()
 base_table.alias('target').merge(
-    dfsaj.alias('updates'), 
+    dfsbj.alias('updates'), 
     "target.filer_committee_id_number == updates.filer_committee_id_number AND target.transaction_id == updates.transaction_id AND target.YEAR == updates.YEAR AND target.MONTH == updates.MONTH" ) \
     .whenMatchedUpdateAll() \
     .whenNotMatchedInsertAll() \

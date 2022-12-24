@@ -255,7 +255,11 @@ def upload(local_path):
         for filename in listdir(full_local_folder):
             full_filename = join(full_local_folder, filename)
             output_uri = join(output_folder_uri, local_folder, filename)
-            os.mkdir(join(output_folder_uri, local_folder))
+            try:
+                os.mkdir(join(output_folder_uri, local_folder))
+            except FileExistsError:
+                pass
+
             with open(output_uri, 'wb') as out_file:
                 print(f'Opening {full_filename}')
                 with open(full_filename, 'rb') as in_file:
@@ -311,6 +315,11 @@ args = parser.parse_args()
 datepattern = args.run_date
 local_metadata_dataset = args.metadata_dataset
 output_folder_uri = args.unzipped_fec_files
+
+if datepattern == 'latest':
+    from datetime import datetime
+    date = datetime.now()
+    datepattern = datetime.strftime(date, '%Y%m%d')
 
 print(f"Working on {datepattern}")
 
