@@ -128,3 +128,111 @@ jobs:
        --forms_done_gate ${{inputs.forms_done_gate}}
        --delta_uri ${{outputs.delta_uri}}
        --side_effect_done_file ${{outputs.side_effect_done_file}}
+  delta_merge_sc:
+    # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
+    type: spark
+    compute: azureml:smallTestSpark
+    conf:
+      spark.executor.instances: "1"
+      spark.driver.memory: "1g"
+      spark.driver.cores: "2"
+      spark.executor.memory: "4g"
+      spark.executor.cores: "2"
+    code: "./deltaMergeComponent"
+    entry:
+      file: "merge_sc.py"
+    inputs:
+      unzipped_fec_files: 
+        path: ${{parent.jobs.fec_unzip.outputs.unzipped_fec_files}}
+        type: uri_folder
+        mode: direct
+      forms_done_gate:
+        path: ${{parent.jobs.delta_merge_forms.outputs.side_effect_done_file}}
+        type: uri_folder
+        mode: direct
+    outputs:
+      side_effect_done_file:
+        type: uri_file
+        mode: direct
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/sc.txt
+      delta_uri:
+        type: uri_folder
+        mode: direct
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/tables
+    args: >-
+       --unzipped_fec_files ${{inputs.unzipped_fec_files}} 
+       --forms_done_gate ${{inputs.forms_done_gate}}
+       --delta_uri ${{outputs.delta_uri}}
+       --side_effect_done_file ${{outputs.side_effect_done_file}}
+  delta_merge_sd:
+    # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
+    type: spark
+    compute: azureml:smallTestSpark
+    conf:
+      spark.executor.instances: "1"
+      spark.driver.memory: "1g"
+      spark.driver.cores: "2"
+      spark.executor.memory: "4g"
+      spark.executor.cores: "2"
+    code: "./deltaMergeComponent"
+    entry:
+      file: "merge_sd.py"
+    inputs:
+      unzipped_fec_files: 
+        path: ${{parent.jobs.fec_unzip.outputs.unzipped_fec_files}}
+        type: uri_folder
+        mode: direct
+      forms_done_gate:
+        path: ${{parent.jobs.delta_merge_forms.outputs.side_effect_done_file}}
+        type: uri_folder
+        mode: direct
+    outputs:
+      side_effect_done_file:
+        type: uri_file
+        mode: direct
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/sd.txt
+      delta_uri:
+        type: uri_folder
+        mode: direct
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/tables
+    args: >-
+       --unzipped_fec_files ${{inputs.unzipped_fec_files}} 
+       --forms_done_gate ${{inputs.forms_done_gate}}
+       --delta_uri ${{outputs.delta_uri}}
+       --side_effect_done_file ${{outputs.side_effect_done_file}}
+  delta_merge_sh:
+    # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
+    type: spark
+    compute: azureml:smallTestSpark
+    conf:
+      spark.executor.instances: "1"
+      spark.driver.memory: "1g"
+      spark.driver.cores: "2"
+      spark.executor.memory: "4g"
+      spark.executor.cores: "2"
+    code: "./deltaMergeComponent"
+    entry:
+      file: "merge_sh.py"
+    inputs:
+      unzipped_fec_files: 
+        path: ${{parent.jobs.fec_unzip.outputs.unzipped_fec_files}}
+        type: uri_folder
+        mode: direct
+      forms_done_gate:
+        path: ${{parent.jobs.delta_merge_forms.outputs.side_effect_done_file}}
+        type: uri_folder
+        mode: direct
+    outputs:
+      side_effect_done_file:
+        type: uri_file
+        mode: direct
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/sh.txt
+      delta_uri:
+        type: uri_folder
+        mode: direct
+        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/tables
+    args: >-
+       --unzipped_fec_files ${{inputs.unzipped_fec_files}} 
+       --forms_done_gate ${{inputs.forms_done_gate}}
+       --delta_uri ${{outputs.delta_uri}}
+       --side_effect_done_file ${{outputs.side_effect_done_file}}
