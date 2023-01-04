@@ -82,7 +82,7 @@ for col_to_lower in [ 'creditor_organization_name', 'creditor_last_name', 'credi
     dfsdj = with_lower_case(dfsdj, col_to_lower)
 
 # enforce no duplicates
-w2 = Window.partitionBy("filer_committee_id_number", "transaction_id_number", "YEAR", "MONTH").orderBy(F.col("upload_date").desc())
+w2 = Window.partitionBy("filer_committee_id_number", "transaction_id_number", "COMMITTEE_PREFIX").orderBy(F.col("upload_date").desc())
 dfsdj = dfsdj.withColumn("__row__", F.row_number().over(w2)) \
   .filter(F.col("__row__") == 1).drop("__row__")
 

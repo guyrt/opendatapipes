@@ -82,11 +82,12 @@ for col_to_lower in ['lender_organization_name', 'lender_last_name', 'lender_fir
     dfscj = with_lower_case(dfscj, col_to_lower)
 
 # enforce no duplicates
-w2 = Window.partitionBy("filer_committee_id_number", "transaction_id_number", "YEAR", "MONTH").orderBy(F.col("upload_date").desc())
+w2 = Window.partitionBy("filer_committee_id_number", "transaction_id_number", "COMMITTEE_PREFIX").orderBy(F.col("upload_date").desc())
 dfscj = dfscj.withColumn("__row__", F.row_number().over(w2)) \
   .filter(F.col("__row__") == 1).drop("__row__")
 
 dfscj = dfscj.withColumn("original_file_formdf", F.lit(""))
+dfscj = dfscj.withColumnRenamed("loan_interest_rate_%_terms", "loan_interest_rate_percent_terms")
 dfscj.printSchema()
 
 # Define Forms table
@@ -117,7 +118,7 @@ CREATE TABLE IF NOT EXISTS SC (
     loan_balance STRING,
     loan_incurred_date_terms STRING,
     loan_due_date_terms STRING,
-    loan_interest_rate_%_terms STRING,
+    loan_interest_rate_percent_terms STRING,
     yesno_secured STRING,
     yesno_personal_funds STRING,
     lender_committee_id_number STRING,

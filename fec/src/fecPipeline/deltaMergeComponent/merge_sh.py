@@ -72,7 +72,7 @@ filers_df.printSchema()
 for col in filers_df.columns:
     filers_df = filers_df.withColumnRenamed(col, f"{col}_formdf")
 
-dfsh = read_folder(unzipped_fec_folder, "SH")
+dfsh = read_folder(unzipped_fec_folder, "SH4")
 dfshj = join_to_forms(dfsh, filers_df)
 nulls_remain = dfshj.filter(F.col('upload_date_formdf').isNull())
 print(nulls_remain.count())
@@ -146,7 +146,7 @@ PARTITIONED BY (YEAR, MONTH)
 LOCATION '{os.path.join(delta_uri, "SH")}'
 """)
 
-base_table = DeltaTable.forPath(sc, os.path.join(delta_uri, 'SB'))
+base_table = DeltaTable.forPath(sc, os.path.join(delta_uri, 'SH'))
 base_table.toDF().printSchema()
 base_table.alias('target').merge(
     dfshj.alias('updates'), 
