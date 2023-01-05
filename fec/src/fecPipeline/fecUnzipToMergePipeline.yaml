@@ -210,7 +210,7 @@ jobs:
     type: command
     code: "./statusUpdates"
     environment: azureml:base-plus-fecpipeline@latest
-    command: "python write_complete.py --run_date ${{inputs.run_date}} --sa_status ${{inputs.sa_status}} --sb_status ${{inputs.sb_status}} --sc_status ${{inputs.sc_status}} --sd_status ${{inputs.sd_status}} --sh_status ${{inputs.sh_status}}"
+    command: "python write_complete.py --run_date ${{inputs.run_date}} --sa_status ${{inputs.sa_status}} --sb_status ${{inputs.sb_status}} --sc_status ${{inputs.sc_status}} --sd_status ${{inputs.sd_status}} --sh_status ${{inputs.sh_status}} --status_out_path ${{outputs.status_out_path}}"
     inputs:
       run_date: ${{parent.inputs.run_date}}
       sa_status:

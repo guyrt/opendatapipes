@@ -1,4 +1,5 @@
 import argparse
+import datetime
 from os.path import join
 
 parser = argparse.ArgumentParser()
@@ -16,6 +17,8 @@ args = parser.parse_args()
 datepattern = args.run_date
 output_folder_uri = args.status_out_path
 
+print(f"Running on output_folder {output_folder_uri} and date {datepattern}")
+
 output_uri = join(output_folder_uri, f"{datepattern}.txt")
 with open(output_uri, 'w') as fh:
-    fh.write(f"Completed")
+    fh.write(f"Completed {str(datetime.datetime.now())}")
