@@ -45,10 +45,6 @@ jobs:
         type: uri_folder
         mode: direct
     outputs:
-      side_effect_done_file:
-        type: uri_file
-        mode: direct
-        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/forms.txt
       delta_uri:
         type: uri_folder
         mode: direct
@@ -56,7 +52,6 @@ jobs:
     args: >-
        --unzipped_fec_files ${{inputs.unzipped_fec_files}} 
        --delta_uri ${{outputs.delta_uri}}
-       --side_effect_done_file ${{outputs.side_effect_done_file}}
   delta_merge_sa:
     type: spark
     compute: azureml:smallTestSpark
@@ -75,14 +70,10 @@ jobs:
         type: uri_folder
         mode: direct
       forms_done_gate:
-        path: ${{parent.jobs.delta_merge_forms.outputs.side_effect_done_file}}
+        path: ${{parent.jobs.delta_merge_forms.outputs.delta_uri}}
         type: uri_folder
         mode: direct
     outputs:
-      side_effect_done_file:
-        type: uri_file
-        mode: direct
-        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/sa.txt
       delta_uri:
         type: uri_folder
         mode: direct
@@ -91,7 +82,6 @@ jobs:
        --unzipped_fec_files ${{inputs.unzipped_fec_files}} 
        --forms_done_gate ${{inputs.forms_done_gate}}
        --delta_uri ${{outputs.delta_uri}}
-       --side_effect_done_file ${{outputs.side_effect_done_file}}
   delta_merge_sb:
     # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
     type: spark
@@ -111,14 +101,10 @@ jobs:
         type: uri_folder
         mode: direct
       forms_done_gate:
-        path: ${{parent.jobs.delta_merge_forms.outputs.side_effect_done_file}}
+        path: ${{parent.jobs.delta_merge_forms.outputs.delta_uri}}
         type: uri_folder
         mode: direct
     outputs:
-      side_effect_done_file:
-        type: uri_file
-        mode: direct
-        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/sb.txt
       delta_uri:
         type: uri_folder
         mode: direct
@@ -127,7 +113,6 @@ jobs:
        --unzipped_fec_files ${{inputs.unzipped_fec_files}} 
        --forms_done_gate ${{inputs.forms_done_gate}}
        --delta_uri ${{outputs.delta_uri}}
-       --side_effect_done_file ${{outputs.side_effect_done_file}}
   delta_merge_sc:
     # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
     type: spark
@@ -147,14 +132,10 @@ jobs:
         type: uri_folder
         mode: direct
       forms_done_gate:
-        path: ${{parent.jobs.delta_merge_forms.outputs.side_effect_done_file}}
+        path: ${{parent.jobs.delta_merge_forms.outputs.delta_uri}}
         type: uri_folder
         mode: direct
     outputs:
-      side_effect_done_file:
-        type: uri_file
-        mode: direct
-        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/sc.txt
       delta_uri:
         type: uri_folder
         mode: direct
@@ -163,7 +144,6 @@ jobs:
        --unzipped_fec_files ${{inputs.unzipped_fec_files}} 
        --forms_done_gate ${{inputs.forms_done_gate}}
        --delta_uri ${{outputs.delta_uri}}
-       --side_effect_done_file ${{outputs.side_effect_done_file}}
   delta_merge_sd:
     # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
     type: spark
@@ -183,14 +163,10 @@ jobs:
         type: uri_folder
         mode: direct
       forms_done_gate:
-        path: ${{parent.jobs.delta_merge_forms.outputs.side_effect_done_file}}
+        path: ${{parent.jobs.delta_merge_forms.outputs.delta_uri}}
         type: uri_folder
         mode: direct
     outputs:
-      side_effect_done_file:
-        type: uri_file
-        mode: direct
-        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/sd.txt
       delta_uri:
         type: uri_folder
         mode: direct
@@ -199,7 +175,6 @@ jobs:
        --unzipped_fec_files ${{inputs.unzipped_fec_files}} 
        --forms_done_gate ${{inputs.forms_done_gate}}
        --delta_uri ${{outputs.delta_uri}}
-       --side_effect_done_file ${{outputs.side_effect_done_file}}
   delta_merge_sh:
     # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
     type: spark
@@ -219,14 +194,10 @@ jobs:
         type: uri_folder
         mode: direct
       forms_done_gate:
-        path: ${{parent.jobs.delta_merge_forms.outputs.side_effect_done_file}}
+        path: ${{parent.jobs.delta_merge_forms.outputs.delta_uri}}
         type: uri_folder
         mode: direct
     outputs:
-      side_effect_done_file:
-        type: uri_file
-        mode: direct
-        path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/sideeffect/sh.txt
       delta_uri:
         type: uri_folder
         mode: direct
@@ -235,4 +206,29 @@ jobs:
        --unzipped_fec_files ${{inputs.unzipped_fec_files}} 
        --forms_done_gate ${{inputs.forms_done_gate}}
        --delta_uri ${{outputs.delta_uri}}
-       --side_effect_done_file ${{outputs.side_effect_done_file}}
+  write_status:
+    type: command
+    code: "./statusUpdates"
+    environment: azureml:base-plus-fecpipeline@latest
+    command: "python write_complete.py --run_date ${{inputs.run_date}} --sa_status ${{inputs.sa_status}} --sb_status ${{inputs.sb_status}} --sc_status ${{inputs.sc_status}} --sd_status ${{inputs.sd_status}} --sh_status ${{inputs.sh_status}}"
+    inputs:
+      run_date: ${{parent.inputs.run_date}}
+      sa_status:
+        type: uri_folder
+        path: ${{parent.jobs.delta_merge_sa.outputs.delta_uri}}
+      sb_status:
+        type: uri_folder
+        path: ${{parent.jobs.delta_merge_sb.outputs.delta_uri}}
+      sc_status:
+        type: uri_folder
+        path: ${{parent.jobs.delta_merge_sc.outputs.delta_uri}}
+      sd_status:
+        type: uri_folder
+        path: ${{parent.jobs.delta_merge_sd.outputs.delta_uri}}
+      sh_status:
+        type: uri_folder
+        path: ${{parent.jobs.delta_merge_sh.outputs.delta_uri}}
+    outputs:
+      status_out_path: 
+        mode: rw_mount
+        path: "azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/merged_fec_data/paths/status"

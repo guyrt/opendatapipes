@@ -14,14 +14,11 @@ sc = SparkSession.builder \
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--unzipped_fec_files", type=str)
-parser.add_argument("--side_effect_done_file", type=str)
 parser.add_argument("--delta_uri", type=str)
 args = parser.parse_args()
 
 unzipped_fec_folder = args.unzipped_fec_files
 delta_uri = args.delta_uri
-output_uri = args.side_effect_done_file
-
 
 print(f"Running on {unzipped_fec_folder}")
 
