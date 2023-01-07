@@ -2,9 +2,9 @@ import argparse
 import os
 
 import pyspark.sql.functions as F
+from pyspark.sql.utils import AnalysisException
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.window import Window
 
 sc = SparkSession.builder \
             .appName("fecDeltaSH") \
@@ -70,7 +70,12 @@ filers_df.printSchema()
 for col in filers_df.columns:
     filers_df = filers_df.withColumnRenamed(col, f"{col}_formdf")
 
-dfsh = read_folder(unzipped_fec_folder, "SH4")
+try:
+    dfsh = read_folder(unzipped_fec_folder, "SH*")
+except AnalysisException:
+    import sys
+    sys.exit(0)
+
 dfshj = join_to_forms(dfsh, filers_df)
 nulls_remain = dfshj.filter(F.col('upload_date_formdf').isNull())
 print(nulls_remain.count())

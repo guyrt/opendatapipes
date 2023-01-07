@@ -2,12 +2,12 @@ import argparse
 import os
 
 import pyspark.sql.functions as F
+from pyspark.sql.utils import AnalysisException
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.window import Window
 
 sc = SparkSession.builder \
-            .appName("fecDeltaSB") \
+            .appName("fecDeltaSE") \
             .getOrCreate()
 
 parser = argparse.ArgumentParser()
@@ -70,27 +70,37 @@ filers_df.printSchema()
 for col in filers_df.columns:
     filers_df = filers_df.withColumnRenamed(col, f"{col}_formdf")
 
-dfsb = read_folder(unzipped_fec_folder, "SB")
-dfsbj = join_to_forms(dfsb, filers_df)
-nulls_remain = dfsbj.filter(F.col('upload_date_formdf').isNull())
+try:
+    dfsh = read_folder(unzipped_fec_folder, "SE")
+except AnalysisException:
+    import sys
+    sys.exit(0)
+
+dfshj = join_to_forms(dfsh, filers_df)
+nulls_remain = dfshj.filter(F.col('upload_date_formdf').isNull())
 print(nulls_remain.count())
 
-dfsbj = dfsbj.cache()
-dfsbj = add_partitions(dfsbj, 'expenditure_date')
-for col_to_lower in [ 'payee_organization_name', 'payee_last_name', 'payee_first_name', 'payee_middle_name', 'payee_prefix', 'payee_suffix', 'payee_street_1', 'payee_street_2', 'payee_city', 'payee_state', 'payee_zip',  'beneficiary_committee_fec_id', 'beneficiary_committee_name', 'beneficiary_candidate_fec_id', 'beneficiary_candidate_last_name', 'beneficiary_candidate_first_name', 'beneficiary_candidate_middle_name', 'beneficiary_candidate_prefix', 'beneficiary_candidate_suffix', 'beneficiary_candidate_office', 'beneficiary_candidate_state', 'beneficiary_candidate_district', 'conduit_name', 'conduit_street_1', 'conduit_street_2_copy', 'conduit_street_2', 'conduit_city', 'conduit_state', 'conduit_zip', 'memo_code', 'memo_textdescription']:
-    dfsbj = with_lower_case(dfsbj, col_to_lower)
+dfshj = dfshj.cache()
+dfshj = add_partitions(dfshj, 'disbursement_date')
 
-# enforce no duplicates
-w2 = Window.partitionBy("filer_committee_id_number", "transaction_id_number", "YEAR", "MONTH").orderBy(F.col("upload_date").desc())
-dfsbj = dfsbj.withColumn("__row__", F.row_number().over(w2)) \
-  .filter(F.col("__row__") == 1).drop("__row__")
+# these random cols are a nuisance
+dfshj = dfshj.withColumnRenamed("supportoppose_code__", "supportoppose_code")
+dfshj = dfshj.withColumnRenamed("election_other_description_", "election_other_description")
+dfshj = dfshj.withColumnRenamed("payee_street__1", "payee_street_1")\
+    .withColumnRenamed("payee_street__2", "payee_street_2")
+                     
+for col_to_lower in ['payee_organization_name', 'payee_last_name', 'payee_first_name', 'payee_middle_name', 'payee_prefix', 'payee_suffix', 'payee_street_1', 'payee_street_2', 'payee_city', 'payee_state', 'payee_zip', 'election_code', 'election_other_description', 't_d_per_electionoffice', 'expenditure_purpose_descrip', 'category_code', 'supportoppose_code', 'so_candidate_first_name', 'so_candinate_middle_name', 'so_candidate_prefix', 'so_candidate_suffix', 'so_candidate_office', 'so_candidate_district', 'so_candidate_state', 'completing_last_name', 'completing_first_name', 'completing_first_name_copy', 'completing_middle_name', 'completing_prefix', 'completing_suffix', 'memo_code', 'memo_textdescription']:
+    dfshj = with_lower_case(dfshj, col_to_lower)
 
-dfsbj = dfsbj.withColumn("original_file_formdf", F.lit(""))
-dfsbj.printSchema()
+dfshj = dfshj.withColumn("original_file_formdf", F.lit(""))
+
+
+dfshj.printSchema()
+
 
 # Define Forms table
 sc.sql(f"""
-CREATE TABLE IF NOT EXISTS SB (
+CREATE TABLE IF NOT EXISTS SE (
     clean_linetype STRING,
     upload_date STRING,
     form_type STRING,
@@ -112,32 +122,34 @@ CREATE TABLE IF NOT EXISTS SB (
     payee_zip STRING,
     election_code STRING,
     election_other_description STRING,
-    expenditure_date STRING,
-    expenditure_amount_f3l_bundled STRING,
-    annual_refunded_bundled_amt STRING,
+    dissemination_date STRING,
+    expenditure_amount STRING,
+    disbursement_date STRING,
+    t_d_per_electionoffice STRING,
     expenditure_purpose_descrip STRING,
     category_code STRING,
-    beneficiary_committee_fec_id STRING,
-    beneficiary_committee_name STRING,
-    beneficiary_candidate_fec_id STRING,
-    beneficiary_candidate_last_name STRING,
-    beneficiary_candidate_first_name STRING,
-    beneficiary_candidate_middle_name STRING,
-    beneficiary_candidate_prefix STRING,
-    beneficiary_candidate_suffix STRING,
-    beneficiary_candidate_office STRING,
-    beneficiary_candidate_state STRING,
-    beneficiary_candidate_district STRING,
-    conduit_name STRING,
-    conduit_street_1 STRING,
-    conduit_street_2 STRING,
-    conduit_street_2_copy STRING,
-    conduit_city STRING,
-    conduit_state STRING,
-    conduit_zip STRING,
+    payee_cmtte_fec_id_number STRING,
+    supportoppose_code STRING,
+    so_candidate_id_number STRING,
+    so_candidate_last_name STRING,
+    so_candidate_first_name STRING,
+    so_candinate_middle_name STRING,
+    so_candidate_prefix STRING,
+    so_candidate_suffix STRING,
+    so_candidate_office STRING,
+    so_candidate_district STRING,
+    so_candidate_state STRING,
+    completing_last_name STRING,
+    completing_first_name STRING,
+    completing_first_name_copy STRING,
+    completing_middle_name STRING,
+    completing_prefix STRING,
+    completing_suffix STRING,
+    date_signed STRING,
     memo_code STRING,
     memo_textdescription STRING,
-    reference_to_si_or_sl_system_code_that_identifies_the_account STRING,
+    filename STRING,
+
     clean_linetype_formdf STRING,
     upload_date_formdf STRING,
     filer_committee_id_number_formdf STRING,
@@ -156,13 +168,13 @@ CREATE TABLE IF NOT EXISTS SB (
     MONTH STRING )
 USING DELTA
 PARTITIONED BY (YEAR, MONTH)
-LOCATION '{os.path.join(delta_uri, "SB")}'
+LOCATION '{os.path.join(delta_uri, "SE")}'
 """)
 
-base_table = DeltaTable.forPath(sc, os.path.join(delta_uri, 'SB'))
+base_table = DeltaTable.forPath(sc, os.path.join(delta_uri, 'SE'))
 base_table.toDF().printSchema()
 base_table.alias('target').merge(
-    dfsbj.alias('updates'), 
+    dfshj.alias('updates'), 
     "target.filer_committee_id_number == updates.filer_committee_id_number AND target.transaction_id_number == updates.transaction_id_number AND target.YEAR == updates.YEAR AND target.MONTH == updates.MONTH" ) \
     .whenMatchedUpdateAll() \
     .whenNotMatchedInsertAll() \

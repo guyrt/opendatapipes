@@ -339,3 +339,6 @@ fec_definitions = json.loads(open(local_metadata_dataset, 'r').read())
 files = listdir(unzip_tempdir.name)
 process_file(fec_definitions, files, datepattern, unzip_tempdir)
 unzip_tempdir.cleanup()
+
+with open(join(output_folder_uri, "dates.txt"), 'w') as out_file:
+    out_file.write(datepattern)
