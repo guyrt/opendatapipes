@@ -10,6 +10,7 @@ settings:
 
 inputs:
   run_date: latest  # 20220227 as example
+  num_days: 1
 
 outputs:
   # Must have this output listed here or you must specify a path for it. I'm considering switching to an explicit path.
@@ -22,6 +23,7 @@ jobs:
     component: azureml:fec_unzip@latest
     inputs:
       run_date: ${{parent.inputs.run_date}}
+      num_days: ${{parent.inputs.num_days}}
       metadata_dataset:
         type: uri_file
         path: azureml://subscriptions/f48a2553-c966-4d06-8faa-c5096da10254/resourcegroups/rg-fecdata/workspaces/fecaml/datastores/fecmetadata/paths/rawparserdata.json

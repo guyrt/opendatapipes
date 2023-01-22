@@ -5,6 +5,7 @@ import pyspark.sql.functions as F
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.window import Window
+from .common import with_lower_case
 
 sc = SparkSession.builder \
             .appName("fecDeltaSC") \
@@ -40,14 +41,6 @@ def join_to_forms(df : DataFrame, df_forms : DataFrame):
     return dfj
 
 
-def with_lower_case(df, col_name, tmp_col_name='_tmp'):
-    raw_cols = df.columns
-    return df.withColumn(tmp_col_name, F.lower(F.col(col_name)))\
-                .drop(col_name)\
-                .withColumnRenamed(tmp_col_name, col_name)\
-                .select(*raw_cols)  # reorder to original
-
-
 def add_partitions(df, col_to_prefix_name):
     # SC has no date column (it's tracking loans) so partition on hash.
     return df.withColumn('COMMITTEE_PREFIX', F.substring(col_to_prefix_name, 1, 4))
@@ -69,7 +62,7 @@ filers_df.printSchema()
 for col in filers_df.columns:
     filers_df = filers_df.withColumnRenamed(col, f"{col}_formdf")
 
-dfsc = read_folder(unzipped_fec_folder, "SC")
+dfsc = read_folder(unzipped_fec_folder, "SC*")
 dfscj = join_to_forms(dfsc, filers_df)
 nulls_remain = dfscj.filter(F.col('upload_date_formdf').isNull())
 print(nulls_remain.count())

@@ -106,14 +106,6 @@ def extract_earmarks(df):
     return df
 
 
-def with_lower_case(df, col_name, tmp_col_name='_tmp'):
-    raw_cols = df.columns
-    return df.withColumn(tmp_col_name, F.lower(F.col(col_name)))\
-                .drop(col_name)\
-                .withColumnRenamed(tmp_col_name, col_name)\
-                .select(*raw_cols)  # reorder to original
-
-
 def add_partitions(df, date_col_name):
     # partition to year/month. later consider a partition to candidate if you want fast lookups.
     return df.withColumn('YEAR', F.substring(date_col_name, 1, 4)) \

@@ -3,6 +3,8 @@
 $startString = $args[0]
 $numDays = $args[1]
 
+az ml compute start --name smallStandard --resource-group rg-fecdata --workspace fecaml
+
 $num_failures = 0
 
 $startDate = [datetime]::parseexact($startString, 'yyyyMMdd', $null)

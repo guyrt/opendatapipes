@@ -5,6 +5,7 @@ import pyspark.sql.functions as F
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.window import Window
+from .common import with_lower_case
 
 sc = SparkSession.builder \
             .appName("fecDeltaSD") \
@@ -38,14 +39,6 @@ def join_to_forms(df : DataFrame, df_forms : DataFrame):
     dfj.cache()
     assert df.count() == dfj.count()
     return dfj
-
-
-def with_lower_case(df, col_name, tmp_col_name='_tmp'):
-    raw_cols = df.columns
-    return df.withColumn(tmp_col_name, F.lower(F.col(col_name)))\
-                .drop(col_name)\
-                .withColumnRenamed(tmp_col_name, col_name)\
-                .select(*raw_cols)  # reorder to original
 
 
 def add_partitions(df, col_to_prefix_name):

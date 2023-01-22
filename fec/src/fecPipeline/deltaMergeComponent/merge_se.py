@@ -5,6 +5,9 @@ import pyspark.sql.functions as F
 from pyspark.sql.utils import AnalysisException
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.window import Window
+
+from .common import with_lower_case
 
 sc = SparkSession.builder \
             .appName("fecDeltaSE") \
@@ -39,13 +42,6 @@ def join_to_forms(df : DataFrame, df_forms : DataFrame):
     assert df.count() == dfj.count()
     return dfj
 
-
-def with_lower_case(df, col_name, tmp_col_name='_tmp'):
-    raw_cols = df.columns
-    return df.withColumn(tmp_col_name, F.lower(F.col(col_name)))\
-                .drop(col_name)\
-                .withColumnRenamed(tmp_col_name, col_name)\
-                .select(*raw_cols)  # reorder to original
 
 
 def add_partitions(df, date_col_name):
@@ -91,6 +87,11 @@ dfshj = dfshj.withColumnRenamed("payee_street__1", "payee_street_1")\
                      
 for col_to_lower in ['payee_organization_name', 'payee_last_name', 'payee_first_name', 'payee_middle_name', 'payee_prefix', 'payee_suffix', 'payee_street_1', 'payee_street_2', 'payee_city', 'payee_state', 'payee_zip', 'election_code', 'election_other_description', 't_d_per_electionoffice', 'expenditure_purpose_descrip', 'category_code', 'supportoppose_code', 'so_candidate_first_name', 'so_candinate_middle_name', 'so_candidate_prefix', 'so_candidate_suffix', 'so_candidate_office', 'so_candidate_district', 'so_candidate_state', 'completing_last_name', 'completing_first_name', 'completing_first_name_copy', 'completing_middle_name', 'completing_prefix', 'completing_suffix', 'memo_code', 'memo_textdescription']:
     dfshj = with_lower_case(dfshj, col_to_lower)
+
+# enforce no duplicates
+w2 = Window.partitionBy("filer_committee_id_number", "transaction_id_number", "YEAR", "MONTH").orderBy(F.col("upload_date").desc())
+dfshj = dfshj.withColumn("__row__", F.row_number().over(w2)) \
+  .filter(F.col("__row__") == 1).drop("__row__")
 
 dfshj = dfshj.withColumn("original_file_formdf", F.lit(""))
 

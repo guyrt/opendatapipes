@@ -5,6 +5,8 @@ import pyspark.sql.functions as F
 from pyspark.sql.utils import AnalysisException
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.window import Window
+from .common import with_lower_case
 
 sc = SparkSession.builder \
             .appName("fecDeltaSH") \
@@ -38,14 +40,6 @@ def join_to_forms(df : DataFrame, df_forms : DataFrame):
     dfj.cache()
     assert df.count() == dfj.count()
     return dfj
-
-
-def with_lower_case(df, col_name, tmp_col_name='_tmp'):
-    raw_cols = df.columns
-    return df.withColumn(tmp_col_name, F.lower(F.col(col_name)))\
-                .drop(col_name)\
-                .withColumnRenamed(tmp_col_name, col_name)\
-                .select(*raw_cols)  # reorder to original
 
 
 def add_partitions(df, date_col_name):
@@ -84,6 +78,12 @@ dfshj = dfshj.cache()
 dfshj = add_partitions(dfshj, 'expenditure_date')
 for col_to_lower in ['payee_organization_name', 'payee_last_name', 'payee_first_name', 'payee_middle_name', 'payee_prefix', 'payee_suffix', 'payee_street_1', 'payee_street_2', 'payee_city', 'payee_state', 'payee_zip', 'memo_code', 'memo_textdescription']:
     dfshj = with_lower_case(dfshj, col_to_lower)
+
+# enforce no duplicates
+w2 = Window.partitionBy("filer_committee_id_number", "transaction_id_number", "YEAR", "MONTH").orderBy(F.col("upload_date").desc())
+dfshj = dfshj.withColumn("__row__", F.row_number().over(w2)) \
+  .filter(F.col("__row__") == 1).drop("__row__")
+
 
 dfshj = dfshj.withColumn("original_file_formdf", F.lit(""))
 # these random cols are a nuisance

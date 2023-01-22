@@ -5,6 +5,7 @@ import pyspark.sql.functions as F
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.window import Window
+from .common import with_lower_case
 
 sc = SparkSession.builder \
             .appName("fecDeltaSA") \
@@ -52,14 +53,6 @@ def extract_earmarks(df):
     df = df.drop("__winred__").drop("__actblue__")
     df = df.withColumn("earmarks", F.upper(F.col("earmarks")))
     return df
-
-
-def with_lower_case(df, col_name, tmp_col_name='_tmp'):
-    raw_cols = df.columns
-    return df.withColumn(tmp_col_name, F.lower(F.col(col_name)))\
-                .drop(col_name)\
-                .withColumnRenamed(tmp_col_name, col_name)\
-                .select(*raw_cols)  # reorder to original
 
 
 def add_partitions(df, date_col_name):

@@ -307,38 +307,49 @@ def download_file(url, local_folder_name):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--run_date", type=str)
+parser.add_argument("--num_days", type=int)
 parser.add_argument("--metadata_dataset", type=str)
 
 parser.add_argument("--unzipped_fec_files", type=str)
 args = parser.parse_args()
 
 datepattern = args.run_date
+num_days = args.num_days
 local_metadata_dataset = args.metadata_dataset
 output_folder_uri = args.unzipped_fec_files
 
 if datepattern == 'latest':
-    from datetime import datetime
-    date = datetime.now()
-    datepattern = datetime.strftime(date, '%Y%m%d')
+    date = datetime.datetime.now()
+    datepattern = datetime.datetime.strftime(date, '%Y%m%d')
+    num_days = 1
 
-print(f"Working on {datepattern}")
+start_date = datetime.datetime.strptime(datepattern, '%Y%m%d')
+end_date = start_date + datetime.timedelta(days=num_days)
 
-#ds = Dataset.File.from_files((datastore, f'electronic/{datepattern}.zip'))
-#downloaded_files = ds.download()
+date_patterns = []
 
-# todo - download file from FEC from the above address.
-fec_url = f'https://cg-519a459a-0ea3-42c2-b7bc-fa1143481f74.s3-us-gov-west-1.amazonaws.com/bulk-downloads/electronic/{datepattern}.zip'
-first_download_folder = get_tempdir("first_download")
-downloaded_file_name = download_file(fec_url, first_download_folder.name)
+while start_date < end_date:
+    datepattern = datetime.datetime.strftime(start_date, '%Y%m%d')
+    date_patterns.append(datepattern)
 
-unzip_tempdir = get_tempdir("raw_zip")
-with zipfile.ZipFile(open(downloaded_file_name, 'rb')) as zipObj:
-    zipObj.extractall(unzip_tempdir.name)
+    print(f"Working on {datepattern}")
 
-fec_definitions = json.loads(open(local_metadata_dataset, 'r').read())
-files = listdir(unzip_tempdir.name)
-process_file(fec_definitions, files, datepattern, unzip_tempdir)
-unzip_tempdir.cleanup()
+    fec_url = f'https://cg-519a459a-0ea3-42c2-b7bc-fa1143481f74.s3-us-gov-west-1.amazonaws.com/bulk-downloads/electronic/{datepattern}.zip'
+    first_download_folder = get_tempdir("first_download")
+    downloaded_file_name = download_file(fec_url, first_download_folder.name)
+
+    unzip_tempdir = get_tempdir("raw_zip")
+    with zipfile.ZipFile(open(downloaded_file_name, 'rb')) as zipObj:
+        zipObj.extractall(unzip_tempdir.name)
+
+    fec_definitions = json.loads(open(local_metadata_dataset, 'r').read())
+    files = listdir(unzip_tempdir.name)
+    process_file(fec_definitions, files, datepattern, unzip_tempdir)
+    unzip_tempdir.cleanup()
+
+    start_date = start_date + datetime.timedelta(days=1)
+
 
 with open(join(output_folder_uri, "dates.txt"), 'w') as out_file:
-    out_file.write(datepattern)
+    for dp in date_patterns:
+        out_file.write(f"{dp}\n")
