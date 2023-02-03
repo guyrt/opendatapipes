@@ -6,7 +6,7 @@ description: Pipeline to extract data and merge it all the way to delta
 
 
 settings:
-  default_compute: azureml:smallStandard
+  default_compute: azureml:smallCluster
 
 inputs:
   run_date: latest  # 20220227 as example
@@ -31,7 +31,7 @@ jobs:
       unzipped_fec_files: ${{parent.outputs.fec_file_temp}}
   delta_merge_forms:
     type: spark
-    compute: azureml:smallTestSpark
+    compute: azureml:smallDelta2
     conf:
       spark.executor.instances: "2"
       spark.driver.memory: "1g"
@@ -57,7 +57,7 @@ jobs:
   delta_merge_sb:
     # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
     type: spark
-    compute: azureml:smallTestSpark
+    compute: azureml:smallDelta2
     conf:
       spark.executor.instances: "3"
       spark.driver.memory: "1g"
@@ -88,7 +88,7 @@ jobs:
   delta_merge_sc:
     # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
     type: spark
-    compute: azureml:smallTestSpark
+    compute: azureml:smallDelta2
     conf:
       spark.executor.instances: "3"
       spark.driver.memory: "1g"
@@ -119,7 +119,7 @@ jobs:
   delta_merge_sd:
     # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
     type: spark
-    compute: azureml:smallTestSpark
+    compute: azureml:smallDelta2
     conf:
       spark.executor.instances: "2"
       spark.driver.memory: "1g"
@@ -150,7 +150,7 @@ jobs:
   delta_merge_se:
     # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
     type: spark
-    compute: azureml:smallTestSpark
+    compute: azureml:smallDelta2
     conf:
       spark.executor.instances: "2"
       spark.driver.memory: "1g"
@@ -182,7 +182,7 @@ jobs:
   delta_merge_sh:
     # https://learn.microsoft.com/en-us/azure/machine-learning/how-to-submit-spark-jobs?tabs=cli
     type: spark
-    compute: azureml:smallTestSpark
+    compute: azureml:smallDelta2
     conf:
       spark.executor.instances: "2"
       spark.driver.memory: "1g"
@@ -212,7 +212,7 @@ jobs:
        --delta_uri ${{outputs.delta_uri}}
   delta_merge_sa:
     type: spark
-    compute: azureml:smallTestSpark
+    compute: azureml:smallDelta2
     conf:
       spark.executor.instances: "3"
       spark.driver.memory: "1g"

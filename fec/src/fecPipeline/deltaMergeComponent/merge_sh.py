@@ -6,7 +6,7 @@ from pyspark.sql.utils import AnalysisException
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.window import Window
-from .common import with_lower_case
+from common import with_lower_case, read_folder
 
 sc = SparkSession.builder \
             .appName("fecDeltaSH") \
@@ -23,14 +23,6 @@ delta_uri = args.delta_uri
 
 
 print(f"Running on {unzipped_fec_folder}")
-
-
-def read_folder(base_uri, folder_name):
-    full_uri = os.path.join(base_uri, folder_name)
-    df = sc.read \
-        .option("mergeSchema", "True") \
-        .load(f'{full_uri}/*.parquet', format='parquet')
-    return df
 
 
 def join_to_forms(df : DataFrame, df_forms : DataFrame):
@@ -65,7 +57,7 @@ for col in filers_df.columns:
     filers_df = filers_df.withColumnRenamed(col, f"{col}_formdf")
 
 try:
-    dfsh = read_folder(unzipped_fec_folder, "SH*")
+    dfsh = read_folder(sc, unzipped_fec_folder, "SH*")
 except AnalysisException:
     import sys
     sys.exit(0)

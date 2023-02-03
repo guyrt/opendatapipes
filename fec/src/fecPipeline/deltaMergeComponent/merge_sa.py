@@ -5,7 +5,7 @@ import pyspark.sql.functions as F
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.window import Window
-from .common import with_lower_case
+from common import with_lower_case, read_folder, add_date_partitions
 
 sc = SparkSession.builder \
             .appName("fecDeltaSA") \
@@ -22,14 +22,6 @@ delta_uri = args.delta_uri
 
 
 print(f"Running on {unzipped_fec_folder}")
-
-
-def read_folder(base_uri, folder_name):
-    full_uri = os.path.join(base_uri, folder_name)
-    df = sc.read \
-        .option("mergeSchema", "True") \
-        .load(f'{full_uri}/*.parquet', format='parquet')
-    return df
 
 
 def join_to_forms(df : DataFrame, df_forms : DataFrame):
@@ -55,12 +47,6 @@ def extract_earmarks(df):
     return df
 
 
-def add_partitions(df, date_col_name):
-    # partition to year/month. later consider a partition to candidate if you want fast lookups.
-    return df.withColumn('YEAR', F.substring(date_col_name, 1, 4)) \
-             .withColumn('MONTH', F.substring(date_col_name, 5, 2))
-
-
 ###
 # Start of script
 ###
@@ -77,14 +63,14 @@ filers_df.printSchema()
 for col in filers_df.columns:
     filers_df = filers_df.withColumnRenamed(col, f"{col}_formdf")
 
-dfsa = read_folder(unzipped_fec_folder, "SA")
+dfsa = read_folder(sc, unzipped_fec_folder, "SA")
 dfsaj = join_to_forms(dfsa, filers_df)
 nulls_remain = dfsaj.filter(F.col('upload_date_formdf').isNull())
 print(nulls_remain.count())
 
 dfsaj = dfsaj.cache()
 dfsaj = extract_earmarks(dfsaj)
-dfsaj = add_partitions(dfsaj, 'contribution_date')
+dfsaj = add_date_partitions(dfsaj, 'contribution_date')
 for col_to_lower in ['contributor_organization_name', 'contributor_last_name', 'contributor_first_name', 'contributor_middle_name', 'contributor_prefix', 'contributor_suffix', 'contributor_street_1', 'contributor_street_2', 'contributor_city', 'contributor_state', 'contributor_zip', 'contribution_purpose_descrip', 'contributor_employer', 'contributor_occupation', 'donor_committee_fec_id', 'donor_committee_name', 'donor_candidate_fec_id', 'donor_candidate_last_name', 'donor_candidate_first_name', 'donor_candidate_middle_name', 'donor_candidate_prefix', 'donor_candidate_suffix', 'donor_candidate_office', 'donor_candidate_state', 'donor_candidate_district', 'conduit_name', 'conduit_street1', 'conduit_street1_copy', 'conduit_street2', 'conduit_city', 'conduit_state', 'conduit_zip', 'memo_code', 'memo_textdescription']:
     dfsaj = with_lower_case(dfsaj, col_to_lower)
 

@@ -8,6 +8,7 @@ from pyspark.sql.types import IntegerType
 from pyspark.sql.utils import AnalysisException
 from pyspark.sql.window import Window
 
+
 sc = SparkSession.builder \
             .appName("fecDeltaForms") \
             .getOrCreate()
@@ -73,43 +74,6 @@ def read_f_files(base_uri):
         base_df = base_df.union(df)
 
     return base_df
-
-
-def read_folder(base_uri, folder_name):
-    full_uri = os.path.join(base_uri, folder_name)
-    df = sc.read \
-        .option("mergeSchema", "True") \
-        .load(f'{full_uri}/*.parquet', format='parquet')
-    return df
-
-
-def join_to_forms(df : DataFrame, df_forms : DataFrame):
-    """Join DataFrame df to the forms DataFrame"""
-    cond = [df['filer_committee_id_number'] == df_forms['filer_committee_id_number_formdf']]
-    dfj = df.join(df_forms, cond, 'leftouter')
-    dfj.cache()
-    assert df.count() == dfj.count()
-    return dfj
-
-
-def extract_earmarks(df):
-    # WinRed
-    winred_col = 'contribution_purpose_descrip'
-    actblue_col = 'memo_code'
-
-    df = df.withColumn("__winred__", F.regexp_extract(F.col(winred_col), "\((c\d+)\)", 1))
-    df = df.withColumn("__actblue__", F.regexp_extract(F.col(actblue_col), "\((c\d+)\)", 1))
-
-    df = df.withColumn("earmarks", F.when(F.col("__winred__") != '', F.col("__winred__")).when(F.col("__actblue__") != '', F.col("__actblue__")).otherwise(''))
-    df = df.drop("__winred__").drop("__actblue__")
-    df = df.withColumn("earmarks", F.upper(F.col("earmarks")))
-    return df
-
-
-def add_partitions(df, date_col_name):
-    # partition to year/month. later consider a partition to candidate if you want fast lookups.
-    return df.withColumn('YEAR', F.substring(date_col_name, 1, 4)) \
-             .withColumn('MONTH', F.substring(date_col_name, 5, 2))
 
 
 ###

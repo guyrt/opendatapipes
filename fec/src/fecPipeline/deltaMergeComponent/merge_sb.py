@@ -5,7 +5,7 @@ import pyspark.sql.functions as F
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.window import Window
-from .common import with_lower_case
+from common import with_lower_case, read_folder, add_date_partitions
 
 sc = SparkSession.builder \
             .appName("fecDeltaSB") \
@@ -24,14 +24,6 @@ delta_uri = args.delta_uri
 print(f"Running on {unzipped_fec_folder}")
 
 
-def read_folder(base_uri, folder_name):
-    full_uri = os.path.join(base_uri, folder_name)
-    df = sc.read \
-        .option("mergeSchema", "True") \
-        .load(f'{full_uri}/*.parquet', format='parquet')
-    return df
-
-
 def join_to_forms(df : DataFrame, df_forms : DataFrame):
     """Join DataFrame df to the forms DataFrame"""
     cond = [df['filer_committee_id_number'] == df_forms['filer_committee_id_number_formdf']]
@@ -39,12 +31,6 @@ def join_to_forms(df : DataFrame, df_forms : DataFrame):
     dfj.cache()
     assert df.count() == dfj.count()
     return dfj
-
-
-def add_partitions(df, date_col_name):
-    # partition to year/month. later consider a partition to candidate if you want fast lookups.
-    return df.withColumn('YEAR', F.substring(date_col_name, 1, 4)) \
-             .withColumn('MONTH', F.substring(date_col_name, 5, 2))
 
 
 ###
@@ -63,13 +49,13 @@ filers_df.printSchema()
 for col in filers_df.columns:
     filers_df = filers_df.withColumnRenamed(col, f"{col}_formdf")
 
-dfsb = read_folder(unzipped_fec_folder, "SB")
+dfsb = read_folder(sc, unzipped_fec_folder, "SB")
 dfsbj = join_to_forms(dfsb, filers_df)
 nulls_remain = dfsbj.filter(F.col('upload_date_formdf').isNull())
 print(nulls_remain.count())
 
 dfsbj = dfsbj.cache()
-dfsbj = add_partitions(dfsbj, 'expenditure_date')
+dfsbj = add_date_partitions(dfsbj, 'expenditure_date')
 for col_to_lower in [ 'payee_organization_name', 'payee_last_name', 'payee_first_name', 'payee_middle_name', 'payee_prefix', 'payee_suffix', 'payee_street_1', 'payee_street_2', 'payee_city', 'payee_state', 'payee_zip',  'beneficiary_committee_fec_id', 'beneficiary_committee_name', 'beneficiary_candidate_fec_id', 'beneficiary_candidate_last_name', 'beneficiary_candidate_first_name', 'beneficiary_candidate_middle_name', 'beneficiary_candidate_prefix', 'beneficiary_candidate_suffix', 'beneficiary_candidate_office', 'beneficiary_candidate_state', 'beneficiary_candidate_district', 'conduit_name', 'conduit_street_1', 'conduit_street_2_copy', 'conduit_street_2', 'conduit_city', 'conduit_state', 'conduit_zip', 'memo_code', 'memo_textdescription']:
     dfsbj = with_lower_case(dfsbj, col_to_lower)
 

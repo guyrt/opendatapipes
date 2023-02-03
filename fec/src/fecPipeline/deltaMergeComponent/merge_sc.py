@@ -5,7 +5,7 @@ import pyspark.sql.functions as F
 from delta.tables import DeltaTable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.window import Window
-from .common import with_lower_case
+from common import with_lower_case, read_folder
 
 sc = SparkSession.builder \
             .appName("fecDeltaSC") \
@@ -22,14 +22,6 @@ delta_uri = args.delta_uri
 
 
 print(f"Running on {unzipped_fec_folder}")
-
-
-def read_folder(base_uri, folder_name):
-    full_uri = os.path.join(base_uri, folder_name)
-    df = sc.read \
-        .option("mergeSchema", "True") \
-        .load(f'{full_uri}/*.parquet', format='parquet')
-    return df
 
 
 def join_to_forms(df : DataFrame, df_forms : DataFrame):
@@ -62,7 +54,7 @@ filers_df.printSchema()
 for col in filers_df.columns:
     filers_df = filers_df.withColumnRenamed(col, f"{col}_formdf")
 
-dfsc = read_folder(unzipped_fec_folder, "SC*")
+dfsc = read_folder(sc, unzipped_fec_folder, "SC*")
 dfscj = join_to_forms(dfsc, filers_df)
 nulls_remain = dfscj.filter(F.col('upload_date_formdf').isNull())
 print(nulls_remain.count())
