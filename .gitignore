@@ -1,3 +1,4 @@
 **/.vscode
 ml/data
 **/.ipynb_checkpoints
+**/creds.json

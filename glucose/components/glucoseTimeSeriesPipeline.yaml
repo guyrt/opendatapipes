@@ -43,20 +43,3 @@ jobs:
         ${{parent.outputs.insulin_timeline}}    
       timezone_switches:
         ${{parent.outputs.timezone_outputs}}    
-
-  # component_b:
-  #   type: command
-  #   component: ./componentB.yml
-  #   inputs:
-  #     component_b_input: ${{parent.jobs.component_a.outputs.component_a_output}}
-  #   outputs:
-  #     component_b_output: 
-  #       mode: rw_mount
-  # component_c:
-  #   type: command
-  #   component: ./componentC.yml
-  #   inputs:
-  #     component_c_input: ${{parent.jobs.component_b.outputs.component_b_output}}
-  #   outputs:
-  #     component_c_output: ${{parent.outputs.final_pipeline_output}}
-  #     #  mode: upload

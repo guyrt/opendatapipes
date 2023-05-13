@@ -1,0 +1,9 @@
+{
+    "aml":
+    {
+        "subscription_id": "<SUBSCRIPTION_ID>",
+        "resource_group_name": "<RESOURCE_GROUP>",
+        "workspace_name": "<AML_WORKSPACE_NAME>"
+    },
+    "openai": "<OpenAI secret key>"
+}
