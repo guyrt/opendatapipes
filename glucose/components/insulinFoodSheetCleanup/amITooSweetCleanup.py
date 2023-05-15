@@ -4,6 +4,7 @@ import numpy as np
 import pytz
 from datetime import datetime
 import re
+from openai_insulin_cleanup import prep_openai_from_key, get_drug_conversions, convert_notes
 
 
 def read_sheet(sheet_uri : str) -> Dict[str, pd.DataFrame]:
@@ -36,8 +37,8 @@ def cleanup_date(raw_date : np.dtype('O')) -> datetime | float:
 def clean_glucose_as_pandas(glucose_df : pd.DataFrame) -> pd.DataFrame:
     
     df = glucose_df[['Date', 'Time', 'Type', 'Units', 'Notes']]
-    df.Date = df.Date.apply(cleanup_date)
-    df.Date = df.Date.interpolate(method='pad')
+    df.loc[:, 'Date'] = df.Date.apply(cleanup_date)
+    df.loc[:, 'Date'] = df.Date.interpolate(method='pad')
 
     def fix_timezones(s):
         if pd.isna(s):
@@ -47,7 +48,7 @@ def clean_glucose_as_pandas(glucose_df : pd.DataFrame) -> pd.DataFrame:
             return s.replace('time zone', '').strip().upper()
         return np.nan
 
-    df["timezone"] = df.Notes.apply(fix_timezones)
+    df.loc[:, "timezone"] = df.Notes.apply(fix_timezones)
     df.at[0, 'timezone'] = 'PST' # fix first value
 
     df['had_timezone'] = pd.isna(df.timezone) == False
@@ -69,9 +70,40 @@ def clean_glucose_as_pandas(glucose_df : pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def convert_to_dicts(df : pd.DataFrame):
+    cols = df.columns
+    for row in df.to_records(index=False):
+        yield {k: v for k, v in zip(cols, row)}
+
+
+def clean_type(rows, raw_insulin_types):
+    """Clean insulin type"""
+    insulin_conversions, conversion_version = get_drug_conversions(raw_insulin_types)
+    for row in rows:
+        try:
+            row["CleanType"] = insulin_conversions[row["Type"]]
+        except KeyError:
+            import ipdb; ipdb.set_trace()
+
+        row["CleanTypeVersion"] = conversion_version
+    return rows
+
+
+def clean_notes(rows):
+    return list(convert_notes(rows))
+
+
 if __name__ == "__main__":
+    import json
+    creds = json.loads(open("../../creds.json", "r").read())
+    prep_openai_from_key(creds["openai"])
+
     sheets = read_sheet("/tmp/local_copy.xlsx")
     glucose = clean_glucose_as_pandas(sheets['glucose'])
-    import pdb; pdb.set_trace()
+    raw_insulin_types = glucose.Type.unique()
+    raw_rows = list(convert_to_dicts(glucose))
+    rows = clean_type(raw_rows, raw_insulin_types)
+    rows = clean_notes(rows)
+    import ipdb; ipdb.set_trace()
     a = 1
 
