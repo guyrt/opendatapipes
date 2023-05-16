@@ -131,4 +131,3 @@ def convert_notes(all_rows) -> List[Dict[Any, Any]]:
             row['ParsedNotesVersion'] = "1.0.0_tdv003"
             row['ParsedNodes'] = notes
             yield row
-

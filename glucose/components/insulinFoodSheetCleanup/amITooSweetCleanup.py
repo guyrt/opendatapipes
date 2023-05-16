@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import pytz
 from datetime import datetime
+from numpyencoder import NumpyEncoder
+
 import re
 from openai_insulin_cleanup import prep_openai_from_key, get_drug_conversions, convert_notes
 
@@ -89,8 +91,17 @@ def clean_type(rows, raw_insulin_types):
     return rows
 
 
-def clean_notes(rows):
-    return list(convert_notes(rows))
+def save_as_json(rows, path):
+    with open(path, 'w') as fh:
+        for row in rows:
+            del row['Date']
+            del row['Time']
+            row['timestamp'] = str(row['timestamp'])
+            
+            d = json.dumps(row, cls=NumpyEncoder)
+            fh.write(d)
+            fh.write("\n")
+
 
 
 if __name__ == "__main__":
@@ -103,7 +114,4 @@ if __name__ == "__main__":
     raw_insulin_types = glucose.Type.unique()
     raw_rows = list(convert_to_dicts(glucose))
     rows = clean_type(raw_rows, raw_insulin_types)
-    rows = clean_notes(rows)
-    import ipdb; ipdb.set_trace()
-    a = 1
-
+    save_as_json(rows, "/tmp/clean1.json")
