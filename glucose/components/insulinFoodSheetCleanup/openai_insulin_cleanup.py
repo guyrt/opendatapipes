@@ -122,11 +122,18 @@ def convert_notes(all_rows) -> List[Dict[Any, Any]]:
         input_rows = [f"{i}: {g['Notes']}" for i, g in zip(range(1, len(group)+1), group)]
         full_prompt = notes_cleanup.format(inputs='\n'.join(input_rows))
         response = run_openai_to_text(full_prompt)
+        print(f"Successful GPT run")
         output_rows = response.split('\n')
         if len(output_rows) != len(group):
             raise Exception(f"Incorrect number of notes rows: expected {len(group)} got {len(output_rows)}")
 
-        parsed_rows = [json.loads(s.split(' ', 1)[1]) for s in output_rows]
+        parsed_rows = []
+        for row in output_rows:
+            try:
+                parsed_rows.append(json.loads(row.split(' ', 1)[1]))
+            except json.JSONDecodeError:
+                import ipdb; ipdb.set_trace()
+
         for row, notes in zip(group, parsed_rows):
             row['ParsedNotesVersion'] = "1.0.0_tdv003"
             row['ParsedNodes'] = notes
