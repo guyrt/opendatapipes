@@ -1,4 +1,5 @@
 """Cleanup insulin records."""
+import json
 import openai
 from typing import List, Dict, Any, AnyStr
 
@@ -39,8 +40,10 @@ notes_cleanup = """
 Each line of input is a raw human input. Your job is to extract several pieces of information into a structured json output. The information you should extract includes:
 * Was this a correction dose? Example strings are "correct at" and "control". This is Boolean.
 * Location. This is always either 'butt' or 'stomach' or 'split'. If you aren't sure or the input doesn't say, then say 'stomach'. If the input says "side" then return "stomach". Only use split if there are two numbers added together.
-* "new_pen" if there was a new pen? The input will always say whether there was a new pen. This is Boolean. Only include in the output if the value is True. If there was a new pen, the input will always say that there was a new pen. Do not output True unless the prompt says there is a new pen.
+* "new_pen" if there was a new pen? The input will always say whether there was a new pen. This is Boolean. Only include in the output if the value is "true". If there was a new pen, the input will always say that there was a new pen. Do not output "true" unless the prompt says there is a new pen.
 * "split" if there are two numbers added like "3+4". In this case return "split": {{"stomach": 3, "butt": 4}}. Stomach will always be the first number. Butt will always be the second number.
+
+Outputs should always be in json format.
 
 Here are some examples:
 Inputs:
@@ -50,10 +53,10 @@ Inputs:
 3: "2+4. Should have been 3+4"
 
 Outputs:
-1: {{'correction': True, 'location': 'stomach'}}
-2: {{'correction': False, 'location': 'stomach', 'new_pen': True}}
-3: {{'correction': False, 'location': 'stomach'}}
-4: {{'correction': False, 'location': 'split', "split": {{"stomach": 3, "butt": }}}}
+1: {{"correction": "true",  "location": "stomach"}}
+2: {{"correction": "false", "location": "stomach", "new_pen": "true"}}
+3: {{"correction": "false", "location": "stomach"}}
+4: {{"correction": "false", "location": "split", "split": {{"stomach": 3, "butt": }}}}
 
 Inputs:
 {inputs}
@@ -119,10 +122,13 @@ def convert_notes(all_rows) -> List[Dict[Any, Any]]:
         input_rows = [f"{i}: {g['Notes']}" for i, g in zip(range(1, len(group)+1), group)]
         full_prompt = notes_cleanup.format(inputs='\n'.join(input_rows))
         response = run_openai_to_text(full_prompt)
-        import pdb; pdb.set_trace()
-        ###(Pdb) response.split('\n')[0]
-###"1: {'correction': False, 'location': 'stomach', 'new_pen': True}"
-###(Pdb) group[0]
-###{'Date': Timestamp('2022-11-07 00:00:00'), 'Time': datetime.time(19, 57), 'Type': 'Lantis', 'Units': 10, 'Notes': 'New pen', 'timezone': 'PST', 'had_timezone': True, 'timestamp': datetime.datetime(2022, 11, 7, 19, 57, tzinfo=<DstTzInfo 'America/Los_Angeles' PST-1 day, 16:00:00 STD>), 'CleanType': 'Lantus', 'CleanTypeVersion': '1.0.0_tdv003'}
-        for row in group:
+        output_rows = response.split('\n')
+        if len(output_rows) != len(group):
+            raise Exception(f"Incorrect number of notes rows: expected {len(group)} got {len(output_rows)}")
+
+        parsed_rows = [json.loads(s.split(' ', 1)[1]) for s in output_rows]
+        for row, notes in zip(group, parsed_rows):
+            row['ParsedNotesVersion'] = "1.0.0_tdv003"
+            row['ParsedNodes'] = notes
             yield row
+

@@ -48,8 +48,8 @@ def clean_glucose_as_pandas(glucose_df : pd.DataFrame) -> pd.DataFrame:
             return s.replace('time zone', '').strip().upper()
         return np.nan
 
-    df.loc[:, "timezone"] = df.Notes.apply(fix_timezones)
-    df.at[0, 'timezone'] = 'PST' # fix first value
+    df["timezone"] = df.Notes.apply(fix_timezones)
+    df.loc[0, 'timezone'] = 'PST' # fix first value
 
     df['had_timezone'] = pd.isna(df.timezone) == False
 
