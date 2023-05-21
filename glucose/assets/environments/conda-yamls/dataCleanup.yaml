@@ -1,0 +1,12 @@
+channels:
+- conda-forge
+dependencies:
+- python=3.11
+- pip:
+  - azureml-defaults
+  - azureml-fsspec
+  - openai
+  - pytz
+  - pandas
+  - pyarrow
+  - openpyxl

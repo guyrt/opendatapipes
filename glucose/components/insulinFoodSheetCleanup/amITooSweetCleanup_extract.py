@@ -3,8 +3,13 @@ import pandas as pd
 import numpy as np
 import pytz
 from datetime import datetime
+import json
+
 import re
-from openai_insulin_cleanup import prep_openai_from_key, get_drug_conversions, convert_notes
+from openai_insulin_cleanup import prep_openai_from_key, get_drug_conversions
+from utils import save_as_json
+
+run_local = False
 
 
 def read_sheet(sheet_uri : str) -> Dict[str, pd.DataFrame]:
@@ -83,18 +88,18 @@ def clean_type(rows, raw_insulin_types):
         try:
             row["CleanType"] = insulin_conversions[row["Type"]]
         except KeyError:
-            import ipdb; ipdb.set_trace()
+            if run_local:
+                import ipdb; ipdb.set_trace()
+            else:
+                raise
 
         row["CleanTypeVersion"] = conversion_version
     return rows
 
 
-def clean_notes(rows):
-    return list(convert_notes(rows))
-
 
 if __name__ == "__main__":
-    import json
+    run_local = True
     creds = json.loads(open("../../creds.json", "r").read())
     prep_openai_from_key(creds["openai"])
 
@@ -103,7 +108,4 @@ if __name__ == "__main__":
     raw_insulin_types = glucose.Type.unique()
     raw_rows = list(convert_to_dicts(glucose))
     rows = clean_type(raw_rows, raw_insulin_types)
-    rows = clean_notes(rows)
-    import ipdb; ipdb.set_trace()
-    a = 1
-
+    save_as_json(rows, "/tmp/clean1.json")
