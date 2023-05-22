@@ -10,3 +10,4 @@ dependencies:
   - pandas
   - pyarrow
   - openpyxl
+  - guidance
