@@ -34,7 +34,6 @@ def join_to_forms(df : DataFrame, df_forms : DataFrame):
 
 
 def extract_earmarks(df):
-    # WinRed
     winred_col = 'contribution_purpose_descrip'
     actblue_col = 'memo_code'
 
